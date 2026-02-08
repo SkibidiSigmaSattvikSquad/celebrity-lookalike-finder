@@ -146,15 +146,17 @@ def process_frame(img_array, matcher):
     match = None
     similarity = 0.0
     
-    if results.multi_face_landmarks and matcher and matcher.celeb_data:
-        match, distance, similarity = matcher.find_match(rgb_img)
+    if results.multi_face_landmarks:
+        if matcher and matcher.celeb_data and len(matcher.celeb_data) > 0:
+            match, distance, similarity = matcher.find_match(rgb_img)
+        
+        lm_list = results.multi_face_landmarks[0].landmark
+        connections = mp_face_mesh.FACEMESH_TESSELATION
         
         if match:
-            lm_list = results.multi_face_landmarks[0].landmark
             curr_lms = np.array([(l.x, l.y) for l in lm_list])
             curr_norm = curr_lms - curr_lms.mean(axis=0)
             errors = np.linalg.norm(curr_norm - match['lms'], axis=1)
-            connections = mp_face_mesh.FACEMESH_TESSELATION
             for conn in connections:
                 err1 = errors[conn[0]]
                 err2 = errors[conn[1]]
@@ -167,6 +169,14 @@ def process_frame(img_array, matcher):
                 x2 = int(lm_list[conn[1]].x * w)
                 y2 = int(lm_list[conn[1]].y * h)
                 cv2.line(img, (x1, y1), (x2, y2), (0, g, r), 1)
+        else:
+            # draw basic mesh in green when no match
+            for conn in connections:
+                x1 = int(lm_list[conn[0]].x * w)
+                y1 = int(lm_list[conn[0]].y * h)
+                x2 = int(lm_list[conn[1]].x * w)
+                y2 = int(lm_list[conn[1]].y * h)
+                cv2.line(img, (x1, y1), (x2, y2), (0, 200, 0), 1)
     
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     return Image.fromarray(img_rgb), match, similarity
@@ -204,7 +214,16 @@ def process_image():
         processed_img, match, similarity = process_frame(image_array, matcher)
         
         if not match:
-            return jsonify({'error': 'no face detected'}), 400
+            # no match but still show results page
+            processed_img_str = image_to_base64(processed_img)
+            return jsonify({
+                'success': True,
+                'match_name': 'No celebrities yet',
+                'similarity': 0.0,
+                'processed_image': processed_img_str,
+                'celebrity_image': processed_img_str,
+                'face_count': len(matcher.celeb_data) if matcher else 0
+            })
         
         processed_img_str = image_to_base64(processed_img)
         celeb_img = Image.open(match['img_path'])
@@ -216,7 +235,7 @@ def process_image():
             'similarity': float(similarity),
             'processed_image': processed_img_str,
             'celebrity_image': celeb_img_str,
-            'face_count': len(matcher.celeb_data) if matcher else 0 if matcher else 0
+            'face_count': len(matcher.celeb_data) if matcher else 0
         })
         
     except Exception as e:
