@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CelebTwin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Permanent+Marker&family=Spline+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+<!-- background stars -->
+<div class="star-decoration star-1">★</div>
+<div class="star-decoration star-2">★</div>
+
+<div id="camera-view" class="camera-view-container">
+<!-- top header -->
+<div class="camera-header">
+<div class="header-left">
+<div class="header-icon">
+<span class="material-symbols-outlined">movie</span>
+</div>
+<div class="header-title font-display">Find your celebrity twin</div>
+</div>
+<button class="exit-button" onclick="window.location.reload()">
+<span class="material-symbols-outlined">close</span> Exit
+</button>
+</div>
+<!-- the camera frame thing -->
+<div class="vanity-mirror-frame">
+<div class="mirror-top-lightbulbs">
+<div class="lightbulb"></div>
+<div class="lightbulb"></div>
+<div class="lightbulb"></div>
+<div class="lightbulb"></div>
+<div class="lightbulb"></div>
+</div>
+
+<!-- Video screen -->
+<div class="video-screen">
+<video id="video" autoplay playsinline muted></video>
+<canvas id="canvas" style="display: none;"></canvas>
+
+<!-- Face guide oval -->
+<div class="face-guide"></div>
+
+<!-- REC indicator -->
+<div class="rec-indicator">
+<span class="rec-dot"></span>
+<span>REC</span>
+</div>
+
+<!-- Sparkle icon -->
+<div class="sparkle-icon">✨</div>
+</div>
+
+<!-- Bottom lightbulbs -->
+<div class="mirror-bottom-lightbulbs">
+<div class="lightbulb"></div>
+<div class="lightbulb"></div>
+<div class="lightbulb"></div>
+<div class="lightbulb"></div>
+<div class="lightbulb"></div>
+</div>
+
+<!-- "You're a Star!" sticker -->
+<div class="star-sticker font-display">You're a Star!</div>
+</div>
+<!-- buttons at bottom -->
+<div class="control-buttons">
+<!-- upload button -->
+<div class="control-button-group">
+<button class="control-button-icon" onclick="uploadPhoto()">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<div class="control-button-label font-display">Upload</div>
+</div>
+
+<!-- main photo button -->
+<div class="take-photo-container">
+<button id="action-btn" class="take-photo-button" onclick="capturePhoto()">
+<div class="take-photo-top-bar"></div>
+<div class="take-photo-main">
+<div class="take-photo-stripes"></div>
+<div class="take-photo-text font-display">Take Photo</div>
+</div>
+</button>
+</div>
+
+<!-- flip camera -->
+<div class="control-button-group">
+<button class="control-button-icon" onclick="flipCamera()">
+<span class="material-symbols-outlined">cameraswitch</span>
+</button>
+<div class="control-button-label font-display">Flip</div>
+</div>
+</div>
+<!-- error stuff -->
+<div id="error-message" class="error-message"></div>
+
+<!-- loading spinner thing -->
+<div id="loading" class="loading-message" style="display: none;">
+<div class="font-display">Finding your celebrity match...</div>
+</div>
+
+<!-- hidden file input for uploads -->
+<input id="file-input" type="file" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
+</div>
+
+<div id="results-view" class="results-view-container">
+<div class="results-content">
+<!-- results page header -->
+<div class="results-header">
+<div class="analysis-complete-badge">
+<span class="material-symbols-outlined">auto_awesome</span>
+<span>Analysis Complete</span>
+</div>
+<h1 class="results-title font-display">It's Uncanny!</h1>
+<svg class="results-underline" preserveAspectRatio="none" viewBox="0 0 100 10">
+<path d="M0 5 Q 50 10 100 5" fill="none" stroke="currentColor" stroke-width="8"></path>
+</svg>
+<p class="results-description font-body">Our algorithms have scribbled through <span id="face-count">50,000</span> faces and found your celebrity twin. The resemblance is striking!</p>
+</div>
+<!-- the main results card -->
+<div class="results-card-container">
+<!-- film strip thing at top -->
+<div class="film-strip-header">
+<div class="film-strip-pattern"></div>
+<div class="film-strip-hole"></div>
+</div>
+
+<!-- card content -->
+<div class="results-card">
+<!-- production info at top -->
+<div class="production-details">
+<div class="production-info">
+<div class="production-label font-hand">PRODUCTION</div>
+<div class="production-value">CELEB MATCH</div>
+</div>
+<div class="production-meta">
+<div class="scene-info">
+<div class="scene-label font-hand">SCENE</div>
+<div class="scene-value">My-Twin</div>
+</div>
+<div class="take-info">
+<div class="take-label font-hand">TAKE</div>
+<div class="take-value" id="similarity-top">96%</div>
+</div>
+</div>
+</div>
+
+<!-- side by side photos -->
+<div class="photos-comparison">
+<!-- user's photo -->
+<div class="photo-card photo-card-left">
+<div class="photo-frame">
+<img id="processed-image" class="photo-image" alt="Your photo"/>
+<div class="photo-label font-display">You</div>
+</div>
+<div class="photo-badge photo-badge-red"></div>
+</div>
+
+<!-- percentage in middle -->
+<div class="match-circle">
+<div class="match-circle-border"></div>
+<svg class="match-circle-svg" fill="none" stroke="currentColor" stroke-dasharray="10 15" stroke-linecap="round" stroke-width="3" viewBox="0 0 100 100">
+<circle cx="50" cy="50" r="45"></circle>
+</svg>
+<div class="match-percentage font-display" id="similarity">96%</div>
+<div class="match-label font-hand">Match Rate</div>
+<div class="match-icon material-symbols-outlined">sync_alt</div>
+</div>
+
+<!-- celeb photo -->
+<div class="photo-card photo-card-right">
+<div class="photo-frame">
+<img id="celebrity-image" class="photo-image" alt="Celebrity match"/>
+<div class="photo-label font-display" id="celebrity-name">Timothée</div>
+</div>
+<div class="photo-badge photo-badge-yellow"></div>
+</div>
+</div>
+
+<!-- bottom film info -->
+<div class="film-details-footer">
+<div class="film-detail font-hand">Cam: A</div>
+<div class="film-detail font-hand">Date: <span id="current-date"></span></div>
+</div>
+</div>
+</div>
+<!-- action buttons -->
+<div class="action-buttons">
+<button class="action-button action-button-white" onclick="tryAgain()">
+<span class="material-symbols-outlined">restart_alt</span> Try Again
+</button>
+<button class="action-button action-button-red" onclick="shareResult()">
+<span class="material-symbols-outlined">share</span> Share Result
+</button>
+<button class="action-button action-button-yellow" onclick="downloadResult()">
+<span class="material-symbols-outlined">download</span> Download
+</button>
+</div>
+</div>
+<!-- extra sections -->
+<div id="sections-container" class="additional-sections" style="display: none;">
+<!-- suggest a celeb -->
+<div class="suggest-section">
+<span class="material-symbols-outlined suggest-icon">person_add</span>
+<h2 class="suggest-title font-display">Don't see your favorite star?</h2>
+<p class="suggest-description">Suggest a celebrity you think we're missing and help us grow our vintage collection.</p>
+
+<div id="suggest-form" class="suggest-form" style="display: none;">
+<input type="text" id="suggest-name" placeholder="Enter celebrity name (e.g., Tom Hanks)" class="suggest-input">
+<button class="suggest-submit-button" onclick="submitCelebritySuggestion()">
+<span class="material-symbols-outlined">search</span> Search & Add
+</button>
+<button class="suggest-cancel-button" onclick="cancelSuggest()">Cancel</button>
+</div>
+<button id="suggest-btn" class="suggest-button" onclick="showSuggestForm()">
+<span class="material-symbols-outlined">person_add</span> Suggest a Celebrity
+</button>
+<div id="suggest-message" class="suggest-message"></div>
+</div>
+
+<!-- add your face -->
+<div class="register-section">
+<span class="register-icon">😊</span>
+<h2 class="register-title font-display">Add Your Face to the Database</h2>
+<div class="register-form">
+<input type="text" id="register-name" placeholder="Your name here" class="register-input">
+<button class="register-button" onclick="registerFace()">
+Join Now <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+<div id="register-message" class="register-message"></div>
+</div>
+</div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+<div class="footer-links">
+<a href="#" class="footer-link">Privacy Policy</a>
+<a href="#" class="footer-link">Terms of Service</a>
+<a href="#" class="footer-link">Credits</a>
+</div>
+<div class="footer-copyright">© 2023 CelebMatch. All rights reserved.</div>
+</div>
+</div>
+</div>
+
+<script>
+(function() {
+    function hideResultsView() {
+        document.getElementById('results-view').style.display = 'none';
+        document.getElementById('sections-container').style.display = 'none';
+        document.getElementById('camera-view').style.display = 'flex';
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', hideResultsView);
+    } else {
+        hideResultsView();
+    }
+})();
+
+let video = null;
+let canvas = null;
+let ctx = null;
+let currentImageData = null;
+let currentStream = null;
+let facingMode = 'user';
+let matchData = null;
+let fileInput = null;
+
+async function initCamera() {
+    document.getElementById('results-view').style.display = 'none';
+    document.getElementById('camera-view').style.display = 'flex';
+    
+    video = document.getElementById('video');
+    canvas = document.getElementById('canvas');
+    if (canvas) {
+        ctx = canvas.getContext('2d');
+    }
+    fileInput = document.getElementById('file-input');
+
+    if (currentStream) {
+        const tracks = currentStream.getTracks();
+        for (let i = 0; i < tracks.length; i++) {
+            tracks[i].stop();
+        }
+    }
+
+    try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error('camera not available, need https or localhost');
+        }
+        
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+                facingMode: facingMode
+            } 
+        });
+        currentStream = stream;
+        video.srcObject = stream;
+        document.getElementById('error-message').textContent = '';
+    } catch (err) {
+        let errorMsg = 'error accessing camera: ' + err.message;
+        if (!navigator.mediaDevices) {
+            errorMsg = 'camera not available, need https or localhost';
+        }
+        const errorEl = document.getElementById('error-message');
+        if (errorEl) {
+            errorEl.textContent = errorMsg;
+        }
+        console.error('camera error:', err);
+    }
+}
+
+async function flipCamera() {
+    facingMode = facingMode === 'user' ? 'environment' : 'user';
+    if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+    }
+    await initCamera();
+}
+
+function uploadPhoto() {
+    if (fileInput) {
+        fileInput.click();
+    }
+}
+
+function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (file && canvas) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                processImage();
+            };
+            img.src = event.target?.result;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function capturePhoto() {
+    if (!canvas) return;
+    if (!ctx) {
+        ctx = canvas.getContext('2d');
+        if (!ctx) return;
+    }
+    
+    if (video) {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            const vw = video.videoWidth;
+            const vh = video.videoHeight;
+            canvas.width = vw;
+            canvas.height = vh;
+            ctx.drawImage(video, 0, 0, vw, vh);
+        } else {
+            canvas.width = 640;
+            canvas.height = 480;
+            ctx.fillStyle = '#e5e7eb';
+            ctx.fillRect(0, 0, 640, 480);
+            ctx.fillStyle = '#6b7280';
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Demo Photo', 320, 240);
+        }
+    } else {
+        canvas.width = 640;
+        canvas.height = 480;
+        ctx.fillStyle = '#e5e7eb';
+        ctx.fillRect(0, 0, 640, 480);
+    }
+    processImage();
+}
+
+async function processImage() {
+    document.getElementById('error-message').textContent = '';
+    document.getElementById('loading').style.display = 'block';
+
+    canvas.toBlob(async (blob) => {
+        const formData = new FormData();
+        formData.append('image', blob, 'photo.jpg');
+        
+        try {
+            const response = await fetch('/api/process_image', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                document.getElementById('error-message').textContent = data.error;
+                document.getElementById('loading').style.display = 'none';
+            } else {
+                showResults(data);
+            }
+        } catch (err) {
+            document.getElementById('error-message').textContent = 'error processing: ' + err.message;
+            document.getElementById('loading').style.display = 'none';
+        }
+    }, 'image/jpeg', 0.95);
+}
+
+function showResults(data) {
+    matchData = data;
+    document.getElementById('camera-view').style.display = 'none';
+    document.getElementById('results-view').style.display = 'block';
+    document.getElementById('sections-container').style.display = 'flex';
+    document.getElementById('loading').style.display = 'none';
+    
+    document.getElementById('processed-image').src = 'data:image/png;base64,' + data.processed_image;
+    document.getElementById('celebrity-image').src = 'data:image/png;base64,' + data.celebrity_image;
+    
+    document.getElementById('celebrity-name').textContent = data.match_name || 'Timothée';
+    
+    const similarity = data.similarity.toFixed(0) + '%';
+    document.getElementById('similarity').textContent = similarity;
+    document.getElementById('similarity-top').textContent = similarity;
+    
+    if (data.face_count !== undefined) {
+        document.getElementById('face-count').textContent = data.face_count.toLocaleString();
+    }
+    
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    document.getElementById('current-date').textContent = dateStr;
+    
+    if (canvas) {
+        canvas.toBlob((blob) => {
+            const reader = new FileReader();
+            reader.onload = () => currentImageData = reader.result;
+            reader.readAsDataURL(blob);
+        });
+    }
+}
+
+function tryAgain() {
+    document.getElementById('camera-view').style.display = 'flex';
+    document.getElementById('results-view').style.display = 'none';
+    document.getElementById('sections-container').style.display = 'none';
+    document.getElementById('register-message').textContent = '';
+    document.getElementById('suggest-message').textContent = '';
+    matchData = null;
+    currentImageData = null;
+    initCamera();
+}
+
+async function registerFace() {
+    const name = document.getElementById('register-name').value.trim();
+    if (!name) {
+        document.getElementById('register-message').textContent = 'need a name';
+        document.getElementById('register-message').style.color = '#ff6b6b';
+        return;
+    }
+    
+    if (!currentImageData) {
+        document.getElementById('register-message').textContent = 'no image to register';
+        document.getElementById('register-message').style.color = '#ff6b6b';
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/register_face', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name, image: currentImageData })
+        });
+        
+        const data = await response.json();
+        
+        if (data.error) {
+            document.getElementById('register-message').textContent = data.error;
+            document.getElementById('register-message').style.color = '#ff6b6b';
+        } else {
+            document.getElementById('register-message').textContent = data.message;
+            document.getElementById('register-message').style.color = '#51cf66';
+            document.getElementById('register-name').value = '';
+        }
+    } catch (err) {
+        document.getElementById('register-message').textContent = 'Error: ' + err.message;
+        document.getElementById('register-message').style.color = '#ff6b6b';
+    }
+}
+
+function shareResult() {
+    if (navigator.share) {
+        if (matchData) {
+            const sim = Math.round(matchData.similarity);
+            const name = matchData.match_name || 'someone';
+            navigator.share({
+                title: `im ${sim}% similar to ${name}!`,
+                text: `check out my celeb match!`,
+            }).catch(function(err) {
+            });
+        }
+    } else {
+        alert('share not available on this device');
+    }
+}
+
+function downloadResult() {
+    if (matchData) {
+        const link = document.createElement('a');
+        link.download = `celebrity-match-${matchData.match_name}.png`;
+        link.href = 'data:image/png;base64,' + matchData.processed_image;
+        link.click();
+    }
+}
+
+function showSuggestForm() {
+    document.getElementById('suggest-form').style.display = 'flex';
+    document.getElementById('suggest-btn').style.display = 'none';
+    document.getElementById('suggest-message').textContent = '';
+    document.getElementById('suggest-name').focus();
+}
+
+function cancelSuggest() {
+    document.getElementById('suggest-form').style.display = 'none';
+    document.getElementById('suggest-btn').style.display = 'flex';
+    document.getElementById('suggest-name').value = '';
+    document.getElementById('suggest-message').textContent = '';
+}
+
+async function submitCelebritySuggestion() {
+    const name = document.getElementById('suggest-name').value.trim();
+    if (!name) {
+        document.getElementById('suggest-message').textContent = 'need a name';
+        document.getElementById('suggest-message').style.color = '#c0392b';
+        return;
+    }
+    
+    document.getElementById('suggest-message').textContent = `searching for ${name}...`;
+    document.getElementById('suggest-message').style.color = '#c0392b';
+    
+    try {
+        const response = await fetch('/api/suggest_celebrity', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name })
+        });
+        
+        const data = await response.json();
+        
+        if (data.error) {
+            document.getElementById('suggest-message').textContent = data.error;
+            document.getElementById('suggest-message').style.color = '#c0392b';
+        } else {
+            document.getElementById('suggest-message').textContent = data.message;
+            document.getElementById('suggest-message').style.color = '#27ae60';
+            document.getElementById('suggest-name').value = '';
+            
+            setTimeout(() => {
+                cancelSuggest();
+            }, 3000);
+        }
+    } catch (err) {
+        document.getElementById('suggest-message').textContent = 'error: ' + err.message;
+        document.getElementById('suggest-message').style.color = '#c0392b';
+    }
+}
+
+initCamera();
+</script>
+
+</body>
+</html>
+

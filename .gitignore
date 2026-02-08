@@ -1,0 +1,37 @@
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Flask
+instance/
+.webassets-cache
+
+# Celebrities (keep directory but ignore images for privacy)
+celebs/*.jpg
+celebs/*.jpeg
+celebs/*.png
+!celebs/README.md
+
+# Cache files (can be regenerated)
+*.pickle
+encodings.pickle
+multi_encodings.pickle
+
