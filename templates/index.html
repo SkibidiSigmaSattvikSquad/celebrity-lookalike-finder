@@ -398,7 +398,28 @@ async function processImage() {
                 body: formData
             });
             
-            const data = await response.json();
+            if (!response.ok) {
+                const text = await response.text();
+                let errorMsg = 'server error';
+                try {
+                    const errData = JSON.parse(text);
+                    errorMsg = errData.error || errorMsg;
+                } catch {
+                    errorMsg = text || `error ${response.status}`;
+                }
+                document.getElementById('error-message').textContent = errorMsg;
+                document.getElementById('loading').style.display = 'none';
+                return;
+            }
+            
+            const text = await response.text();
+            if (!text) {
+                document.getElementById('error-message').textContent = 'empty response from server';
+                document.getElementById('loading').style.display = 'none';
+                return;
+            }
+            
+            const data = JSON.parse(text);
             
             if (data.error) {
                 document.getElementById('error-message').textContent = data.error;
@@ -478,7 +499,14 @@ async function registerFace() {
             body: JSON.stringify({ name: name, image: currentImageData })
         });
         
-        const data = await response.json();
+        const text = await response.text();
+        if (!text) {
+            document.getElementById('register-message').textContent = 'empty response';
+            document.getElementById('register-message').style.color = '#ff6b6b';
+            return;
+        }
+        
+        const data = JSON.parse(text);
         
         if (data.error) {
             document.getElementById('register-message').textContent = data.error;
@@ -551,7 +579,14 @@ async function submitCelebritySuggestion() {
             body: JSON.stringify({ name: name })
         });
         
-        const data = await response.json();
+        const text = await response.text();
+        if (!text) {
+            document.getElementById('suggest-message').textContent = 'empty response';
+            document.getElementById('suggest-message').style.color = '#c0392b';
+            return;
+        }
+        
+        const data = JSON.parse(text);
         
         if (data.error) {
             document.getElementById('suggest-message').textContent = data.error;
