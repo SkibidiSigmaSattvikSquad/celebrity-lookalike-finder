@@ -1,38 +1,28 @@
 # celebrity lookalike
 
-finds which celebrity you look like
+finds which celebrity you look like (Flask Version)
 
-## how to run
+## how to run locally
 
 ```bash
 pip install -r requirements.txt
 python app.py
 ```
 
-then go to http://localhost:5000
+## hosting (The "Easy" Way)
 
-## hosting
+### ❌ GitHub Pages / Netlify / Vercel
+These will **not** work for this app. They are for "static" sites (HTML/JS only). This app needs a **Python Server** to run the face-recognition AI.
 
-### Koyeb (Recommended)
-This app has complex dependencies. Using the **Docker builder** is much more reliable than Buildpacks.
+### ✅ Hugging Face Spaces (Easiest for Flask)
+This is effectively "GitHub Pages for AI apps." It's the only free place that reliably runs the heavy libraries this app uses.
 
-1. Create a new service on [koyeb.com](https://www.koyeb.com/).
-2. Connect your repo.
-3. In the **Builder** section, select **Docker** (it will use the `Dockerfile` in the repo).
-4. In the **Environment** section, add your `TMDB_API_KEY`.
-5. In the **Exposed Port** section, set it to **8000**.
-6. **Instance**: If it crashes, you may need a larger instance than "Nano" (512MB) for face recognition.
-
-### Hugging Face Spaces
-1. Create a new Space on [huggingface.co](https://huggingface.co/new-space).
-2. Select **Docker**.
-3. Push your code and add `TMDB_API_KEY` as a **Secret**.
-
-### Render.com
-1. Create a **New Web Service**.
-2. Connect your GitHub repo.
-3. Build Command: `chmod +x build.sh && ./build.sh`
-4. Start Command: `gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120`
+1. **Push your code**: `git push`
+2. Create a **[New Space](https://huggingface.co/new-space)**.
+3. Select **Docker** as the SDK.
+4. **Connect GitHub**: Select your `celebrity-lookalike-finder` repo.
+5. **Add Secret**: In Settings, add `TMDB_API_KEY` so celebrity photos show up.
+6. **Done**: It will build and give you a public URL.
 
 ## environment variables
 - `TMDB_API_KEY`: Your The Movie Database API key.
