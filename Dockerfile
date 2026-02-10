@@ -20,6 +20,6 @@ COPY . .
 # Create celebs directory if it doesn't exist
 RUN mkdir -p celebs
 
-EXPOSE 8080
+EXPOSE 8000
 
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8080", "--workers", "1", "--timeout", "120"]
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8000", "--workers", "1", "--timeout", "120"]
