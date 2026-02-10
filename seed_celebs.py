@@ -7,6 +7,7 @@ import numpy as np
 import time
 import json
 from duckduckgo_search import DDGS
+import os
 
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY")
 

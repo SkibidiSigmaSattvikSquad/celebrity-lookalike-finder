@@ -9,6 +9,7 @@ import sys
 import json
 import pickle
 from duckduckgo_search import DDGS
+import os
 
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY") 
 
