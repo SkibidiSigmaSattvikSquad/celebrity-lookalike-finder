@@ -1,6 +1,9 @@
 app = "celebrity-lookalike-finder"
 primary_region = "iad"
 
+[env]
+  PORT = "8080"
+
 [build]
 
 [http_service]

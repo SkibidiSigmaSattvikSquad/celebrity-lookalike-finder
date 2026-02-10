@@ -5,9 +5,10 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import time
+import json
 from duckduckgo_search import DDGS
 
-TMDB_API_KEY = "928d45ccb3dae4dcce45dbba02d64ca2"
+TMDB_API_KEY = os.environ.get("TMDB_API_KEY")
 
 def is_face_present(image_bytes):
     try:
@@ -63,28 +64,9 @@ def seed_celebs():
         os.makedirs(celebs_dir, exist_ok=True)
     
     # popular celebs to seed
-    celebs = [
-        "Taylor Swift", "Ariana Grande", "Billie Eilish", "Justin Bieber", 
-        "Dua Lipa", "Rihanna", "Beyonce", "Lady Gaga", "Drake", "The Weeknd",
-        "Harry Styles", "Olivia Rodrigo", "Selena Gomez", "Ed Sheeran", "Adele",
-        "Bruno Mars", "Zendaya", "Tom Holland", "Robert Downey Jr", "Scarlett Johansson",
-        "Dwayne Johnson", "Tom Cruise", "Brad Pitt", "Leonardo DiCaprio", "Margot Robbie",
-        "Jennifer Lawrence", "Ryan Reynolds", "Timothee Chalamet", "Jenna Ortega",
-        "Cillian Murphy", "Pedro Pascal", "Keanu Reeves", "Will Smith", "Angelina Jolie",
-        "Jennifer Lopez", "Gal Gadot", "Chris Evans", "Chris Hemsworth", "Johnny Depp",
-        "Emma Watson", "Sydney Sweeney", "Millie Bobby Brown", "Ryan Gosling",
-        "Ben Affleck", "Jennifer Aniston", "Adam Sandler", "Cristiano Ronaldo",
-        "Lionel Messi", "LeBron James", "Stephen Curry", "Serena Williams",
-        "Elon Musk", "Jeff Bezos", "Bill Gates", "Mark Zuckerberg", "Oprah Winfrey",
-        "Kim Kardashian", "Kylie Jenner", "Kendall Jenner", "Gigi Hadid", "Bella Hadid",
-        "Shakira", "Nicki Minaj", "Cardi B", "Bad Bunny", "Travis Scott", "Zayn Malik",
-        "Doja Cat", "Blake Lively", "Austin Butler", "Jacob Elordi", "Caitlin Clark",
-        "Lewis Hamilton", "Max Verstappen", "Novak Djokovic", "Tiger Woods", "Virat Kohli",
-        "Neymar Jr", "Kylian Mbappe", "Shohei Ohtani", "Patrick Mahomes", "Simone Biles",
-        "Charles Leclerc", "Roger Federer", "Kevin Durant", "Giannis Antetokounmpo",
-        "Sam Altman", "Lisa Su", "Jensen Huang", "Joe Rogan",
-        "Sabrina Carpenter", "Olivia Wilde", "Florence Pugh", "Anya Taylor-Joy"
-    ]
+    config_path = os.path.join(os.path.dirname(__file__), "config", "celebs.json")
+    with open(config_path, "r") as f:
+        celebs = json.load(f)["celebs"]
     
     headers = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'

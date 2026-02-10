@@ -16,6 +16,7 @@ import time
 import requests
 from duckduckgo_search import DDGS
 import random
+import json
 
 app = Flask(__name__)
 
@@ -333,7 +334,7 @@ def is_face_present(image_bytes):
 
 def get_tmdb_image(name):
     try:
-        TMDB_API_KEY = "928d45ccb3dae4dcce45dbba02d64ca2"
+        TMDB_API_KEY = os.environ.get("TMDB_API_KEY")
         url = f"https://api.themoviedb.org/3/search/person"
         params = {"api_key": TMDB_API_KEY, "query": name}
         data = requests.get(url, params=params, timeout=5).json()

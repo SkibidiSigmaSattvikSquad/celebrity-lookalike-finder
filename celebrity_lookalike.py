@@ -6,7 +6,7 @@ import os
 import time
 import pickle
 
-class CelebrityChallengeUltimate:
+class CelebMatcherApp:
     def __init__(self):
         self.celebs_dir = "celebs"
         self.cache_file = "encodings.pickle"

@@ -6,11 +6,13 @@ import numpy as np
 import time
 import random
 import sys
+import json
+import pickle
 from duckduckgo_search import DDGS
 
-TMDB_API_KEY = "928d45ccb3dae4dcce45dbba02d64ca2" 
+TMDB_API_KEY = os.environ.get("TMDB_API_KEY") 
 
-class UltimateScraper:
+class CelebScraper:
     def __init__(self):
         self.base_dir = "celebs"
         if not os.path.exists(self.base_dir): os.makedirs(self.base_dir)
@@ -70,47 +72,11 @@ class UltimateScraper:
         sys.stdout.write(f'\rProgress: [{bar}] {current}/{total} ({int(fraction*100)}%) | {status_text[:30].ljust(30)}')
         sys.stdout.flush()
 
-    def scrape(self, celeb_list):
-        total = len(celeb_list)
-        print(f"starting scrape for {total} celebrities...")
-        
-        with DDGS() as ddgs:
-            for i, name in enumerate(celeb_list):
-                clean_name = name.replace(" ", "_").lower()
-                
-                if any(f.startswith(clean_name) for f in os.listdir(self.base_dir)):
-                    self.draw_progress_bar(i + 1, total, f"Skipped: {name}")
-                    continue
-
-                self.draw_progress_bar(i + 1, total, f"Searching: {name}")
-                img_data = None
-
-                img_data = self.get_tmdb_image(name)
-                
-                if not img_data or not self.is_face_present(img_data):
-                    img_data = self.get_wikipedia_image(name)
-
-                if not img_data or not self.is_face_present(img_data):
-                    try:
-                        results = list(ddgs.images(keywords=f"{name} headshot portrait", max_results=2))
-                        for r in results:
-                            resp = requests.get(r['image'], timeout=5, headers=self.headers)
-                            if resp.status_code == 200 and self.is_face_present(resp.content):
-                                img_data = resp.content
-                                break
-                    except: pass
-
-                if img_data and self.is_face_present(img_data):
-                    filename = f"{clean_name}_{int(time.time())}.jpg"
-                    with open(os.path.join(self.base_dir, filename), "wb") as f:
-                        f.write(img_data)
-                else:
-                    print(f"\nfailed to find face for {name}")
-
-                time.sleep(random.uniform(2, 4))
         print("\nscrape complete!")
 
 if __name__ == "__main__":
-    top_celebs = ["Taylor Swift", "Ariana Grande", "Billie Eilish", "Justin Bieber", "Dua Lipa", "Rihanna", "Beyonce", "Lady Gaga", "Shakira", "Drake", "The Weeknd", "Harry Styles", "Olivia Rodrigo", "Selena Gomez", "Kanye West", "Ed Sheeran", "Adele", "Bruno Mars", "Nicki Minaj", "Cardi B", "Bad Bunny", "Rosé", "J Balvin", "Travis Scott", "Zayn Malik", "Doja Cat", "Hozier", "Myles Smith", "Zendaya", "Tom Holland", "Robert Downey Jr", "Scarlett Johansson", "Dwayne Johnson", "Tom Cruise", "Brad Pitt", "Leonardo DiCaprio", "Margot Robbie", "Jennifer Lawrence", "Ryan Reynolds", "Blake Lively", "Timothee Chalamet", "Jenna Ortega", "Cillian Murphy", "Pedro Pascal", "Keanu Reeves", "Will Smith", "Angelina Jolie", "Jennifer Lopez", "Gal Gadot", "Chris Evans", "Chris Hemsworth", "Johnny Depp", "Emma Watson", "Sydney Sweeney", "Millie Bobby Brown", "Ryan Gosling", "Ben Affleck", "Jennifer Aniston", "Adam Sandler", "Caitlin Clark", "Austin Butler", "Jacob Elordi", "Cristiano Ronaldo", "Lionel Messi", "LeBron James", "Stephen Curry", "Lewis Hamilton", "Max Verstappen", "Novak Djokovic", "Serena Williams", "Tiger Woods", "Virat Kohli", "Neymar Jr", "Kylian Mbappe", "Shohei Ohtani", "Patrick Mahomes", "Simone Biles", "Charles Leclerc", "Roger Federer", "Kevin Durant", "Giannis Antetokounmpo", "Elon Musk", "Jeff Bezos", "Bill Gates", "Mark Zuckerberg", "Sam Altman", "Dario Amodei", "Demis Hassabis", "Lisa Su", "Jensen Huang", "Oprah Winfrey", "Kim Kardashian", "Kylie Jenner", "Kendall Jenner", "Joe Rogan", "Jimmy Donaldson", "Khloe Kardashian", "Kris Jenner", "Gigi Hadid", "Bella Hadid", "Donald Trump", "Kamala Harris", "Kate Middleton", "Sabrina Carpenter"]
+    config_path = os.path.join(os.path.dirname(__file__), "config", "celebs.json")
+    with open(config_path, "r") as f:
+        config = json.load(f)
     
-    UltimateScraper().scrape(top_celebs)
+    CelebScraper().scrape(config["celebs"])
