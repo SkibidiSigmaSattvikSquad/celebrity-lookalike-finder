@@ -1,7 +1,8 @@
-FROM python:3.11-slim
+FROM python:3.11-bullseye
 
 # Install system dependencies for OpenCV and dlib
-RUN apt-get update && apt-get install -y \
+# Using --no-install-recommends to prevent OOM from unnecessary packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     libopenblas-dev \
