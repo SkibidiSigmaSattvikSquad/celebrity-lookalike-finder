@@ -14,12 +14,14 @@ RUN chown $MAMBA_USER:$MAMBA_USER /app
 # Switch to micromamba user
 USER $MAMBA_USER
 
-# Install Python and heavy binaries (dlib, opencv) via micromamba
-# This avoids the compilation step that causes OOM
+# Install Python, pip, dlib, opencv, and gunicorn via micromamba
+# This bypasses all heavy compilation steps
 RUN micromamba install -y -n base -c conda-forge \
     python=3.11 \
+    pip \
     dlib \
     opencv \
+    gunicorn \
     && micromamba clean --all --yes
 
 # Copy requirements
@@ -29,7 +31,8 @@ COPY --chown=$MAMBA_USER:$MAMBA_USER requirements.txt .
 # We remove the heavy ones that we already installed via mamba
 RUN sed -i '/dlib/d' requirements.txt && \
     sed -i '/opencv/d' requirements.txt && \
-    pip install --no-cache-dir --user -r requirements.txt
+    sed -i '/gunicorn/d' requirements.txt && \
+    python -m pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application
 COPY --chown=$MAMBA_USER:$MAMBA_USER . .
