@@ -1,22 +1,29 @@
 FROM mambaorg/micromamba:latest
 
-# Switch to root to install minimal system libs for OpenCV
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
+    libxcb1 \
+    libxcb-xinerama0 \
+    libxcb-shm0 \
+    libxcb-randr0 \
+    libxcb-render0 \
+    libxcb-render-util0 \
+    libxcb-xfixes0 \
+    libxcb-xkb1 \
+    libxcb-image0 \
+    libxcb-icccm4 \
+    libxcb-keysyms1 \
+    libxcb-glx0 \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Set up work directory and permissions
 WORKDIR /app
 RUN chown $MAMBA_USER:$MAMBA_USER /app
 
-# Switch to micromamba user
 USER $MAMBA_USER
 
-# Install Python, pip, dlib, opencv, and gunicorn via micromamba
-# This bypasses all heavy compilation steps
 RUN micromamba install -y -n base -c conda-forge \
     python=3.11 \
     pip \
@@ -27,14 +34,10 @@ RUN micromamba install -y -n base -c conda-forge \
     gunicorn \
     && micromamba clean --all --yes
 
-# Copy requirements
 COPY --chown=$MAMBA_USER:$MAMBA_USER requirements.txt .
 
-# Set environment path to include the micromamba base environment
 ENV PATH="/opt/conda/bin:$PATH"
 
-# Install the remaining lighter packages via pip
-# We remove the heavy ones that we already installed via mamba
 RUN sed -i '/dlib/d' requirements.txt && \
     sed -i '/opencv/d' requirements.txt && \
     sed -i '/gunicorn/d' requirements.txt && \
@@ -42,14 +45,10 @@ RUN sed -i '/dlib/d' requirements.txt && \
     sed -i '/face_recognition_models/d' requirements.txt && \
     python -m pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application
 COPY --chown=$MAMBA_USER:$MAMBA_USER . .
 
-# Ensure the celebs directory exists and is writable
 RUN mkdir -p /app/celebs && chown -R $MAMBA_USER:$MAMBA_USER /app/celebs
 
-# Use PORT env var (Railway sets this automatically)
 EXPOSE 8080
 
-# Railway will use Procfile, but this works if Dockerfile is used
 CMD ["sh", "-c", "gunicorn app:app --bind 0.0.0.0:${PORT:-8080} --workers 1 --timeout 120 --access-logfile - --error-logfile -"]
