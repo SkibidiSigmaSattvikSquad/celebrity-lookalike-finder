@@ -58,10 +58,10 @@ class CelebrityMatcher:
                     data = pickle.load(f)
                     if data and len(data) > 0:
                         self.celeb_data = data
-                        print(f"loaded {len(self.celeb_data)} celebs from cache")
+                        print(f"loaded {len(self.celeb_data)} celebs from cache", flush=True)
                         return self.celeb_data
                     else:
-                        print("cache empty, rebuilding...")
+                        print("cache empty, rebuilding...", flush=True)
             except Exception as e:
                 print(f"error loading cache: {e}, rebuilding...")
         
@@ -74,7 +74,7 @@ class CelebrityMatcher:
         
         files = os.listdir(self.celebs_dir)
         image_files = [f for f in files if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
-        print(f"found {len(image_files)} image files in celebs dir")
+        print(f"found {len(image_files)} image files in celebs dir", flush=True)
         
         for filename in image_files:
             filepath = os.path.join(self.celebs_dir, filename)
@@ -125,15 +125,15 @@ class CelebrityMatcher:
                         'lms': lms,
                         'img_path': filepath
                     })
-                    print(f"encoded {filename}")
+                    print(f"encoded {filename}", flush=True)
                 else:
-                    print(f"no face found in {filename}")
+                    print(f"no face found in {filename}", flush=True)
             except Exception as e:
                 print(f"error processing {filename}: {e}")
                 import traceback
                 traceback.print_exc()
         
-        print(f"database loaded: {len(self.celeb_data)} celebrities")
+        print(f"database loaded: {len(self.celeb_data)} celebrities", flush=True)
         with open(self.cache_file, 'wb') as f:
             pickle.dump(self.celeb_data, f)
         
@@ -175,32 +175,34 @@ class CelebrityMatcher:
         return self.celeb_data[idx], distance, similarity
 
 
-print("initializing matcher...")
+import sys
+sys.stdout.flush()
+print("initializing matcher...", flush=True)
 try:
     matcher = CelebrityMatcher()
     matcher.load_database()
     celeb_count = len(matcher.celeb_data)
-    print(f"loaded {celeb_count} celebrities")
+    print(f"loaded {celeb_count} celebrities", flush=True)
     
     if celeb_count == 0:
-        print("database empty, seeding in background...")
+        print("database empty, seeding in background...", flush=True)
         def seed_background():
             try:
                 from seed_celebs import seed_celebs
-                print("starting seed process...")
+                print("starting seed process...", flush=True)
                 added = seed_celebs()
-                print(f"seed finished, added {added} images")
+                print(f"seed finished, added {added} images", flush=True)
                 if matcher:
                     matcher.load_database()
-                    print(f"database reloaded. total: {len(matcher.celeb_data)}")
+                    print(f"database reloaded. total: {len(matcher.celeb_data)}", flush=True)
             except Exception as e:
-                print(f"seed failed: {e}")
+                print(f"seed failed: {e}", flush=True)
                 import traceback
                 traceback.print_exc()
         
         threading.Thread(target=seed_background, daemon=True).start()
 except Exception as e:
-    print(f"matcher init failed: {e}")
+    print(f"matcher init failed: {e}", flush=True)
     import traceback
     traceback.print_exc()
     matcher = None
