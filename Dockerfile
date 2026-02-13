@@ -27,6 +27,7 @@ USER $MAMBA_USER
 RUN micromamba install -y -n base -c conda-forge \
     python=3.11 \
     pip \
+    setuptools \
     dlib \
     opencv \
     face-recognition \
@@ -46,7 +47,8 @@ RUN sed -i '/dlib/d' requirements.txt && \
 
 COPY --chown=$MAMBA_USER:$MAMBA_USER . .
 
-RUN /opt/conda/bin/python -m pip install --no-cache-dir git+https://github.com/ageitgey/face_recognition_models && \
+RUN /opt/conda/bin/python -m pip install --no-cache-dir setuptools && \
+    /opt/conda/bin/python -m pip install --no-cache-dir git+https://github.com/ageitgey/face_recognition_models && \
     /opt/conda/bin/python -c "import face_recognition_models; print('face_recognition_models installed successfully')" && \
     mkdir -p /app/celebs && chown -R $MAMBA_USER:$MAMBA_USER /app/celebs
 
