@@ -42,12 +42,13 @@ RUN sed -i '/dlib/d' requirements.txt && \
     sed -i '/opencv/d' requirements.txt && \
     sed -i '/gunicorn/d' requirements.txt && \
     sed -i '/face-recognition/d' requirements.txt && \
-    python -m pip install --no-cache-dir -r requirements.txt && \
-    python -m pip install --no-cache-dir git+https://github.com/ageitgey/face_recognition_models
+    /opt/conda/bin/python -m pip install --no-cache-dir -r requirements.txt
 
 COPY --chown=$MAMBA_USER:$MAMBA_USER . .
 
-RUN mkdir -p /app/celebs && chown -R $MAMBA_USER:$MAMBA_USER /app/celebs
+RUN /opt/conda/bin/python -m pip install --no-cache-dir git+https://github.com/ageitgey/face_recognition_models && \
+    /opt/conda/bin/python -c "import face_recognition_models; print('face_recognition_models installed successfully')" && \
+    mkdir -p /app/celebs && chown -R $MAMBA_USER:$MAMBA_USER /app/celebs
 
 EXPOSE 8080
 
