@@ -58,6 +58,7 @@ class CelebrityMatcher:
                     data = pickle.load(f)
                     if data and len(data) > 0:
                         self.celeb_data = data
+                        print(f"loaded {len(self.celeb_data)} celebs from cache")
                         return self.celeb_data
                     else:
                         print("cache empty, rebuilding...")
@@ -68,35 +69,45 @@ class CelebrityMatcher:
         
         if not os.path.exists(self.celebs_dir):
             os.makedirs(self.celebs_dir, exist_ok=True)
+            print("celebs dir created, empty")
             return self.celeb_data
         
         files = os.listdir(self.celebs_dir)
-        for filename in files:
-            if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
-                filepath = os.path.join(self.celebs_dir, filename)
-                try:
-                    img_bgr = cv2.imread(filepath)
-                    if img_bgr is None:
-                        continue
-                    
-                    rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-                    face_encs = face_recognition.face_encodings(rgb)
-                    
-                    if face_encs and len(face_encs) > 0:
-                        name = os.path.splitext(filename)[0]
-                        lms = self.get_norm_lms(img_bgr)
-                        if lms is None:
-                            lms = np.zeros((468, 2))
-                        
-                        self.celeb_data.append({
-                            'name': name,
-                            'enc': face_encs[0],
-                            'lms': lms,
-                            'img_path': filepath
-                        })
-                except Exception as e:
-                    continue
+        image_files = [f for f in files if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+        print(f"found {len(image_files)} image files in celebs dir")
         
+        for filename in image_files:
+            filepath = os.path.join(self.celebs_dir, filename)
+            try:
+                img_bgr = cv2.imread(filepath)
+                if img_bgr is None:
+                    print(f"failed to read {filename}")
+                    continue
+                
+                rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+                face_encs = face_recognition.face_encodings(rgb)
+                
+                if face_encs and len(face_encs) > 0:
+                    name = os.path.splitext(filename)[0]
+                    lms = self.get_norm_lms(img_bgr)
+                    if lms is None:
+                        lms = np.zeros((468, 2))
+                    
+                    self.celeb_data.append({
+                        'name': name,
+                        'enc': face_encs[0],
+                        'lms': lms,
+                        'img_path': filepath
+                    })
+                    print(f"encoded {filename}")
+                else:
+                    print(f"no face found in {filename}")
+            except Exception as e:
+                print(f"error processing {filename}: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        print(f"database loaded: {len(self.celeb_data)} celebrities")
         with open(self.cache_file, 'wb') as f:
             pickle.dump(self.celeb_data, f)
         
@@ -248,6 +259,29 @@ def reload_database():
     return jsonify({'error': 'matcher not initialized'}), 500
 
 
+@app.route('/api/seed', methods=['POST'])
+def trigger_seed():
+    if not matcher:
+        return jsonify({'error': 'matcher not initialized'}), 500
+    
+    def seed_background():
+        try:
+            from seed_celebs import seed_celebs
+            print("manual seed triggered...")
+            added = seed_celebs()
+            print(f"seed finished, added {added} images")
+            if matcher:
+                matcher.load_database()
+                print(f"database reloaded. total: {len(matcher.celeb_data)}")
+        except Exception as e:
+            print(f"seed failed: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    threading.Thread(target=seed_background, daemon=True).start()
+    return jsonify({'success': True, 'message': 'seeding started in background'})
+
+
 @app.route('/api/process_image', methods=['POST'])
 def process_image():
     try:
@@ -343,7 +377,16 @@ def register_face():
         
         filename = f"{name.lower().replace(' ', '_')}_{int(time.time())}.jpg"
         filepath = os.path.join(celebs_dir, filename)
-        cv2.imwrite(filepath, cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR))
+        
+        img_bgr = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(filepath, img_bgr)
+        
+        rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+        face_encs = face_recognition.face_encodings(rgb)
+        
+        if not face_encs or len(face_encs) == 0:
+            os.remove(filepath)
+            return jsonify({'error': 'no face detected in image'}), 400
         
         if matcher:
             matcher.load_database()
@@ -351,6 +394,9 @@ def register_face():
         return jsonify({'success': True, 'message': f'registered {name} successfully!'})
         
     except Exception as e:
+        print(f"error in register_face: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
@@ -375,6 +421,8 @@ def is_face_present(image_bytes):
 def get_tmdb_image(name):
     try:
         TMDB_API_KEY = os.environ.get("TMDB_API_KEY")
+        if not TMDB_API_KEY:
+            return None
         url = f"https://api.themoviedb.org/3/search/person"
         params = {"api_key": TMDB_API_KEY, "query": name}
         data = requests.get(url, params=params, timeout=5).json()
@@ -458,7 +506,7 @@ def suggest_celebrity():
                             img_data = resp.content
                             break
             except Exception as e:
-                pass
+                print(f"ddgs search failed: {e}")
         
         if img_data and is_face_present(img_data):
             filename = f"{clean_name}_{int(time.time())}.jpg"
@@ -479,6 +527,9 @@ def suggest_celebrity():
             }), 400
         
     except Exception as e:
+        print(f"error in suggest_celebrity: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
