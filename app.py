@@ -512,7 +512,6 @@ def register_face():
             pil_img.save(filepath, 'JPEG', quality=95)
             
             # Ensure file is written and exists
-            import time
             time.sleep(0.1)  # Small delay to ensure file is fully written
             if not os.path.exists(filepath):
                 return jsonify({'error': 'failed to save image file'}), 500
