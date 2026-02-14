@@ -440,23 +440,25 @@ def register_face():
             if pil_img.mode != 'RGB':
                 pil_img = pil_img.convert('RGB')
             
-            rgb = np.array(pil_img, dtype=np.uint8)
-            rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
-            
-            h, w = rgb.shape[:2]
+            h, w = pil_img.size[1], pil_img.size[0]
             if h > 2000 or w > 2000:
                 scale = min(2000.0 / h, 2000.0 / w)
                 new_w = int(w * scale)
                 new_h = int(h * scale)
-                rgb = cv2.resize(rgb, (new_w, new_h))
-                rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
+                pil_img = pil_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            
+            pil_img.save(filepath, 'JPEG', quality=95)
+            
+            rgb = face_recognition.load_image_file(filepath)
+            rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
+            
+            print(f"register_face: rgb shape={rgb.shape}, dtype={rgb.dtype}, min={rgb.min()}, max={rgb.max()}", flush=True)
             
             face_encs = face_recognition.face_encodings(rgb)
             
-            if face_encs and len(face_encs) > 0:
-                img_bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-                cv2.imwrite(filepath, img_bgr)
-            else:
+            if not face_encs or len(face_encs) == 0:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
                 return jsonify({'error': 'no face detected in image'}), 400
         except Exception as e:
             if os.path.exists(filepath):
