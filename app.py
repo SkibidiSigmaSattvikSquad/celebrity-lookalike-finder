@@ -32,24 +32,12 @@ _db_version_lock = threading.Lock()
 
 
 def format_celebrity_name(filename_name):
-    """
-    Convert filename format (e.g., 'max_verstappen_1767003749') to proper name (e.g., 'Max Verstappen').
-    Removes timestamp suffix and converts underscores to spaces with proper capitalization.
-    """
     if not filename_name:
         return filename_name
     
-    # Remove file extension if present
     name = filename_name.rsplit('.', 1)[0]
-    
-    # Remove timestamp suffix (last underscore followed by numbers)
-    # Pattern: underscore followed by digits at the end
     name = re.sub(r'_\d+$', '', name)
-    
-    # Convert underscores to spaces
     name = name.replace('_', ' ')
-    
-    # Title case (capitalize first letter of each word)
     name = name.title()
     
     return name
@@ -287,15 +275,10 @@ except Exception as e:
 
 
 def calculate_face_statistics(user_lms, match_lms):
-    """
-    Calculate detailed face matching statistics including angles and region similarities.
-    Returns a dictionary with statistics.
-    """
     if user_lms is None or match_lms is None:
         return None
     
-    # MediaPipe face mesh landmark indices for different regions
-    # Based on MediaPipe Face Mesh documentation
+    # MediaPipe face mesh landmark indices
     LEFT_EYE_INDICES = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246]
     RIGHT_EYE_INDICES = [362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398]
     NOSE_INDICES = [1, 2, 5, 4, 6, 19, 20, 94, 125, 141, 235, 236, 3, 51, 48, 115, 131, 134, 102, 49, 220, 305, 290, 305, 290, 305]
@@ -308,13 +291,11 @@ def calculate_face_statistics(user_lms, match_lms):
         'regions': {}
     }
     
-    # Calculate overall similarity based on landmark distances
     errors = np.linalg.norm(user_lms - match_lms, axis=1)
     avg_error = np.mean(errors)
     stats['overall_similarity'] = max(0, (1 - avg_error * 10) * 100)
     
-    # Calculate angles
-    # Face angle (using nose tip and chin)
+    # Face angle
     nose_tip_idx = 1
     chin_idx = 175
     if len(user_lms) > chin_idx and len(match_lms) > chin_idx:
@@ -329,7 +310,6 @@ def calculate_face_statistics(user_lms, match_lms):
             'difference': round(angle_diff, 1)
         }
     
-    # Calculate region similarities
     def calculate_region_similarity(indices):
         if not indices:
             return 0.0
@@ -349,14 +329,12 @@ def calculate_face_statistics(user_lms, match_lms):
         'face_oval': calculate_region_similarity(FACE_OVAL_INDICES)
     }
     
-    # Find most similar region
     most_similar = max(stats['regions'].items(), key=lambda x: x[1])
     stats['most_similar_region'] = {
         'name': most_similar[0].replace('_', ' ').title(),
         'similarity': most_similar[1]
     }
     
-    # Find least similar region
     least_similar = min(stats['regions'].items(), key=lambda x: x[1])
     stats['least_similar_region'] = {
         'name': least_similar[0].replace('_', ' ').title(),
@@ -367,12 +345,6 @@ def calculate_face_statistics(user_lms, match_lms):
 
 
 def draw_wireframe_on_image(img_array, match_data=None):
-    """
-    Draw wireframe overlay on an image using MediaPipe face mesh.
-    If match_data is provided, color-code based on landmark matching errors.
-    Otherwise, draw green wireframe.
-    Returns PIL Image with wireframe overlay.
-    """
     if len(img_array.shape) != 3 or img_array.shape[2] != 3:
         return Image.fromarray(img_array)
     
@@ -404,7 +376,6 @@ def draw_wireframe_on_image(img_array, match_data=None):
         connections = mp_face_mesh.FACEMESH_TESSELATION
         
         if match_data and 'lms' in match_data:
-            # Color-code based on landmark matching errors
             curr_lms = np.array([(l.x, l.y) for l in lm_list])
             curr_norm = curr_lms - curr_lms.mean(axis=0)
             errors = np.linalg.norm(curr_norm - match_data['lms'], axis=1)
@@ -421,7 +392,6 @@ def draw_wireframe_on_image(img_array, match_data=None):
                 y2 = int(lm_list[conn[1]].y * h)
                 cv2.line(img, (x1, y1), (x2, y2), (0, g, r), 1)
         else:
-            # Draw green wireframe
             for conn in connections:
                 x1 = int(lm_list[conn[0]].x * w)
                 y1 = int(lm_list[conn[0]].y * h)
@@ -639,17 +609,13 @@ def process_image():
             print(f"process_image: match found! name: {match['name']}, similarity: {similarity:.2f}%", flush=True)
             processed_img_str = image_to_base64(processed_img)
             
-            # Load celebrity image and add wireframe overlay
             celeb_img = Image.open(match['img_path'])
             if celeb_img.mode != 'RGB':
                 celeb_img = celeb_img.convert('RGB')
             celeb_img_array = np.array(celeb_img, dtype=np.uint8)
-            
-            # Draw wireframe on celebrity image using the match's landmark data
             celeb_img_with_wireframe = draw_wireframe_on_image(celeb_img_array, match)
             celeb_img_str = image_to_base64(celeb_img_with_wireframe)
             
-            # Format the celebrity name for display
             display_name = format_celebrity_name(match['name'])
             print(f"process_image: formatted display name: {display_name}", flush=True)
             
@@ -662,7 +628,6 @@ def process_image():
                 'face_count': len(matcher.celeb_data) if matcher else 0
             }
             
-            # Add statistics if available
             if statistics:
                 response_data['statistics'] = statistics
             
@@ -717,13 +682,9 @@ def register_face():
                 pil_img = pil_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
             
             pil_img.save(filepath, 'JPEG', quality=95)
-            
-            # Ensure file is written and exists
-            time.sleep(0.1)  # Small delay to ensure file is fully written
+            time.sleep(0.1)
             if not os.path.exists(filepath):
                 return jsonify({'error': 'failed to save image file'}), 500
-            
-            print(f"register_face: saved image to {filepath}, file size: {os.path.getsize(filepath)} bytes", flush=True)
             
             rgb = face_recognition.load_image_file(filepath)
             
@@ -761,7 +722,6 @@ def register_face():
             if os.path.exists(cache_path):
                 os.remove(cache_path)
                 print(f"cleared cache file: {cache_path}", flush=True)
-                # Verify deletion
                 if os.path.exists(cache_path):
                     print(f"WARNING: cache file still exists after deletion!", flush=True)
                 else:
@@ -769,7 +729,6 @@ def register_face():
             else:
                 print(f"cache file does not exist: {cache_path}", flush=True)
             
-            # Force rebuild by clearing celeb_data first
             matcher.celeb_data = []
             matcher.load_database(force_rebuild=True)
             new_count = len(matcher.celeb_data)
@@ -782,7 +741,6 @@ def register_face():
                 matching_files = [f for f in all_files if f.lower().startswith(expected_prefix)]
                 print(f"files matching '{expected_prefix}': {matching_files}", flush=True)
             
-            # Check for exact matches first, then partial matches
             found_exact = False
             found_partial = False
             for celeb in matcher.celeb_data:

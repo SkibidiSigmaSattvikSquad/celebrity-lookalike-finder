@@ -527,7 +527,6 @@ function showResults(data) {
     const dateStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
     document.getElementById('current-date').textContent = dateStr;
     
-    // Display statistics if available
     if (data.statistics) {
         displayStatistics(data.statistics);
         document.getElementById('statistics-section').style.display = 'block';
@@ -545,7 +544,6 @@ function showResults(data) {
 }
 
 function displayStatistics(stats) {
-    // Display region similarities
     const regionStats = document.getElementById('region-stats');
     if (stats.regions) {
         regionStats.innerHTML = '';
@@ -563,7 +561,6 @@ function displayStatistics(stats) {
         }
     }
     
-    // Display angles
     const angleStats = document.getElementById('angle-stats');
     if (stats.angles && stats.angles.face_angle) {
         const angle = stats.angles.face_angle;
@@ -585,7 +582,6 @@ function displayStatistics(stats) {
         angleStats.innerHTML = '<div class="stat-no-data">Angle data not available</div>';
     }
     
-    // Display insights
     const insightStats = document.getElementById('insight-stats');
     let insightsHTML = '';
     if (stats.most_similar_region) {
