@@ -332,9 +332,8 @@ def process_frame(img_array, matcher):
                 print(f"process_frame: no match found (match is None)", flush=True)
         else:
             print(f"process_frame: matcher not available or database empty", flush=True)
-    else:
-        print(f"process_frame: MediaPipe did not detect any faces", flush=True)
         
+        # Draw wireframe overlay
         lm_list = results.multi_face_landmarks[0].landmark
         connections = mp_face_mesh.FACEMESH_TESSELATION
         
@@ -361,6 +360,8 @@ def process_frame(img_array, matcher):
                 x2 = int(lm_list[conn[1]].x * w)
                 y2 = int(lm_list[conn[1]].y * h)
                 cv2.line(img, (x1, y1), (x2, y2), (0, 200, 0), 1)
+    else:
+        print(f"process_frame: MediaPipe did not detect any faces", flush=True)
     
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     return Image.fromarray(img_rgb), match, similarity
