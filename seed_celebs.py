@@ -130,27 +130,33 @@ def seed_celebs():
                 print(f"  no Wikipedia image for {name}", flush=True)
         
         if not img_data:
-            try:
-                print(f"  trying DDGS for {name}...", flush=True)
-                with DDGS() as ddgs:
-                    results = list(ddgs.images(query=f"{name} headshot portrait", max_results=3))
-                    print(f"  DDGS returned {len(results)} results for {name}", flush=True)
-                    for r in results:
-                        try:
-                            resp = requests.get(r['image'], timeout=5, headers=headers)
-                            if resp.status_code == 200:
-                                print(f"  downloaded image from DDGS for {name}", flush=True)
-                                if is_face_present(resp.content):
-                                    img_data = resp.content
-                                    print(f"  face found in DDGS image for {name}", flush=True)
-                                    break
-                                else:
-                                    print(f"  no face in DDGS image for {name}", flush=True)
-                        except Exception as e:
-                            print(f"  error downloading DDGS image: {e}", flush=True)
-                            continue
-            except Exception as e:
-                print(f"  DDGS error for {name}: {e}", flush=True)
+            for attempt in range(3):
+                try:
+                    print(f"  trying DDGS for {name} (attempt {attempt+1})...", flush=True)
+                    time.sleep(1 + attempt * 2)
+                    with DDGS() as ddgs:
+                        results = list(ddgs.images(query=f"{name} headshot portrait", max_results=5))
+                        print(f"  DDGS returned {len(results)} results for {name}", flush=True)
+                        for r in results:
+                            try:
+                                resp = requests.get(r['image'], timeout=10, headers=headers)
+                                if resp.status_code == 200:
+                                    print(f"  downloaded image from DDGS for {name}", flush=True)
+                                    if is_face_present(resp.content):
+                                        img_data = resp.content
+                                        print(f"  face found in DDGS image for {name}", flush=True)
+                                        break
+                                    else:
+                                        print(f"  no face in DDGS image for {name}", flush=True)
+                            except Exception as e:
+                                print(f"  error downloading DDGS image: {e}", flush=True)
+                                continue
+                    if img_data:
+                        break
+                except Exception as e:
+                    print(f"  DDGS error for {name} (attempt {attempt+1}): {e}", flush=True)
+                    if attempt < 2:
+                        time.sleep(2)
         
         if img_data:
             if is_face_present(img_data):
@@ -183,7 +189,7 @@ def seed_celebs():
         else:
             print(f"  no image found for {name}", flush=True)
         
-        time.sleep(0.5)
+        time.sleep(1)
     
     print(f"done! added {added} celebrities")
     return added

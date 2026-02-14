@@ -142,6 +142,7 @@ class CelebrityMatcher:
     
     def find_match(self, frame_rgb):
         if not self.celeb_data or len(self.celeb_data) == 0:
+            print(f"find_match: no celeb data, count={len(self.celeb_data) if self.celeb_data else 0}", flush=True)
             return None, None, None
         
         if len(frame_rgb.shape) != 3 or frame_rgb.shape[2] != 3:
@@ -162,9 +163,14 @@ class CelebrityMatcher:
         if not small_rgb.flags['C_CONTIGUOUS']:
             small_rgb = np.ascontiguousarray(small_rgb, dtype=np.uint8)
         
-        face_encs = face_recognition.face_encodings(small_rgb)
+        try:
+            face_encs = face_recognition.face_encodings(small_rgb)
+        except Exception as e:
+            print(f"find_match: face_encodings error: {e}", flush=True)
+            return None, None, None
         
         if not face_encs or len(face_encs) == 0:
+            print(f"find_match: no face detected in frame", flush=True)
             return None, None, None
         
         celeb_encs = [c['enc'] for c in self.celeb_data]
@@ -172,6 +178,8 @@ class CelebrityMatcher:
         idx = np.argmin(dists)
         distance = dists[idx]
         similarity = max(0, (1 - distance) * 100)
+        
+        print(f"find_match: matched {self.celeb_data[idx]['name']} with similarity {similarity:.2f}%", flush=True)
         
         return self.celeb_data[idx], distance, similarity
 
@@ -479,11 +487,15 @@ def register_face():
             traceback.print_exc()
             return jsonify({'error': f'face encoding failed: {str(e)}'}), 400
         
-        
         if matcher:
             matcher.load_database()
+            print(f"database reloaded after registering {name}, total: {len(matcher.celeb_data)}", flush=True)
         
-        return jsonify({'success': True, 'message': f'registered {name} successfully!'})
+        return jsonify({
+            'success': True, 
+            'message': f'registered {name} successfully!',
+            'count': len(matcher.celeb_data) if matcher else 0
+        })
         
     except Exception as e:
         print(f"error in register_face: {e}")
@@ -589,16 +601,22 @@ def suggest_celebrity():
                 img_data = None
         
         if not img_data:
-            try:
-                with DDGS() as ddgs:
-                    results = list(ddgs.images(query=f"{name} headshot portrait", max_results=3))
-                    for r in results:
-                        resp = requests.get(r['image'], timeout=5, headers=headers)
-                        if resp.status_code == 200 and is_face_present(resp.content):
-                            img_data = resp.content
+            for attempt in range(3):
+                try:
+                    time.sleep(1 + attempt * 2)
+                    with DDGS() as ddgs:
+                        results = list(ddgs.images(query=f"{name} headshot portrait", max_results=5))
+                        for r in results:
+                            resp = requests.get(r['image'], timeout=10, headers=headers)
+                            if resp.status_code == 200 and is_face_present(resp.content):
+                                img_data = resp.content
+                                break
+                        if img_data:
                             break
-            except Exception as e:
-                print(f"ddgs search failed: {e}")
+                except Exception as e:
+                    print(f"ddgs search failed (attempt {attempt+1}): {e}", flush=True)
+                    if attempt < 2:
+                        time.sleep(2)
         
         if img_data and is_face_present(img_data):
             filename = f"{clean_name}_{int(time.time())}.jpg"
@@ -638,10 +656,12 @@ def suggest_celebrity():
             
             if matcher:
                 matcher.load_database()
+                print(f"database reloaded after adding {name}, total: {len(matcher.celeb_data)}", flush=True)
             
             return jsonify({
                 'success': True,
-                'message': f'added {name} to database!'
+                'message': f'added {name} to database!',
+                'count': len(matcher.celeb_data) if matcher else 0
             })
         else:
             return jsonify({
