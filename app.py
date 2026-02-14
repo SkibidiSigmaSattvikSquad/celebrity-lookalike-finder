@@ -109,7 +109,7 @@ class CelebrityMatcher:
                 img_bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
                 
                 try:
-                    face_encs = face_recognition.face_encodings(rgb)
+                    face_encs = face_recognition.face_encodings(rgb, num_jitters=1)
                 except Exception as e:
                     print(f"error encoding {filename}: {e}, shape={rgb.shape}, dtype={rgb.dtype}", flush=True)
                     continue
@@ -164,7 +164,7 @@ class CelebrityMatcher:
             small_rgb = np.ascontiguousarray(small_rgb, dtype=np.uint8)
         
         try:
-            face_encs = face_recognition.face_encodings(small_rgb)
+            face_encs = face_recognition.face_encodings(small_rgb, num_jitters=1)
         except Exception as e:
             print(f"find_match: face_encodings error: {e}", flush=True)
             return None, None, None
@@ -178,6 +178,14 @@ class CelebrityMatcher:
         idx = np.argmin(dists)
         distance = dists[idx]
         similarity = max(0, (1 - distance) * 100)
+        
+        celeb_names = [c['name'] for c in self.celeb_data]
+        print(f"find_match: checking {len(self.celeb_data)} celebs: {celeb_names}", flush=True)
+        print(f"find_match: best match: {self.celeb_data[idx]['name']} with distance={distance:.4f}, similarity={similarity:.2f}%", flush=True)
+        
+        if distance > 0.6:
+            print(f"find_match: distance too high ({distance:.4f} > 0.6), no match", flush=True)
+            return None, None, None
         
         print(f"find_match: matched {self.celeb_data[idx]['name']} with similarity {similarity:.2f}%", flush=True)
         
@@ -455,6 +463,13 @@ def register_face():
                 new_h = int(h * scale)
                 pil_img = pil_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
             
+            h, w = pil_img.size[1], pil_img.size[0]
+            if h > 800 or w > 800:
+                scale = min(800.0 / h, 800.0 / w)
+                new_w = int(w * scale)
+                new_h = int(h * scale)
+                pil_img = pil_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            
             pil_img.save(filepath, 'JPEG', quality=95)
             
             rgb = face_recognition.load_image_file(filepath)
@@ -473,7 +488,7 @@ def register_face():
             is_contiguous = rgb.flags['C_CONTIGUOUS']
             print(f"register_face: rgb shape={rgb.shape}, dtype={rgb.dtype}, min={rgb.min()}, max={rgb.max()}, contiguous={is_contiguous}", flush=True)
             
-            face_encs = face_recognition.face_encodings(rgb)
+            face_encs = face_recognition.face_encodings(rgb, num_jitters=1)
             
             if not face_encs or len(face_encs) == 0:
                 if os.path.exists(filepath):
@@ -488,8 +503,20 @@ def register_face():
             return jsonify({'error': f'face encoding failed: {str(e)}'}), 400
         
         if matcher:
+            old_count = len(matcher.celeb_data)
             matcher.load_database()
-            print(f"database reloaded after registering {name}, total: {len(matcher.celeb_data)}", flush=True)
+            new_count = len(matcher.celeb_data)
+            print(f"database reloaded after registering {name}: {old_count} -> {new_count} celebs", flush=True)
+            
+            found = False
+            for celeb in matcher.celeb_data:
+                if name.lower().replace(' ', '_') in celeb['name'].lower():
+                    print(f"found registered face '{name}' in database as '{celeb['name']}'", flush=True)
+                    found = True
+                    break
+            
+            if not found:
+                print(f"WARNING: registered face '{name}' not found in database after reload!", flush=True)
         
         return jsonify({
             'success': True, 
