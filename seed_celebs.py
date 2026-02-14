@@ -17,16 +17,19 @@ def is_face_present(image_bytes):
     try:
         nparr = np.frombuffer(image_bytes, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        if img is None: return False
+        if img is None:
+            return False
         rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         mp_face_detection = mp.solutions.face_detection
         face_detector = mp_face_detection.FaceDetection(
             model_selection=1, 
-            min_detection_confidence=0.6
+            min_detection_confidence=0.5
         )
         results = face_detector.process(rgb_img)
-        return results.detections is not None
-    except:
+        has_face = results.detections is not None and len(results.detections) > 0
+        return has_face
+    except Exception as e:
+        print(f"is_face_present error: {e}", flush=True)
         return False
 
 def get_tmdb_image(name):
@@ -101,57 +104,84 @@ def seed_celebs():
         
         existing = [f for f in os.listdir(celebs_dir) if f.lower().startswith(clean_name)]
         if existing:
+            print(f"skipping {name} - already exists", flush=True)
             continue
         
         img_data = None
         
+        print(f"trying {name}...", flush=True)
         img_data = get_tmdb_image(name)
-        if img_data and not is_face_present(img_data):
-            img_data = None
+        if img_data:
+            print(f"  got TMDB image for {name}", flush=True)
+            if not is_face_present(img_data):
+                print(f"  no face in TMDB image for {name}", flush=True)
+                img_data = None
+        else:
+            print(f"  no TMDB image for {name}", flush=True)
         
         if not img_data:
             img_data = get_wikipedia_image(name)
-            if img_data and not is_face_present(img_data):
-                img_data = None
+            if img_data:
+                print(f"  got Wikipedia image for {name}", flush=True)
+                if not is_face_present(img_data):
+                    print(f"  no face in Wikipedia image for {name}", flush=True)
+                    img_data = None
+            else:
+                print(f"  no Wikipedia image for {name}", flush=True)
         
         if not img_data:
             try:
+                print(f"  trying DDGS for {name}...", flush=True)
                 with DDGS() as ddgs:
-                    results = list(ddgs.images(keywords=f"{name} headshot portrait", max_results=2))
+                    results = list(ddgs.images(keywords=f"{name} headshot portrait", max_results=3))
+                    print(f"  DDGS returned {len(results)} results for {name}", flush=True)
                     for r in results:
-                        resp = requests.get(r['image'], timeout=5, headers=headers)
-                        if resp.status_code == 200 and is_face_present(resp.content):
-                            img_data = resp.content
-                            break
-            except:
-                pass
-        
-        if img_data and is_face_present(img_data):
-            try:
-                pil_img = Image.open(io.BytesIO(img_data))
-                if pil_img.mode != 'RGB':
-                    pil_img = pil_img.convert('RGB')
-                
-                img_array = np.array(pil_img, dtype=np.uint8)
-                img_array = np.ascontiguousarray(img_array, dtype=np.uint8)
-                
-                h, w = img_array.shape[:2]
-                if h > 2000 or w > 2000:
-                    scale = min(2000.0 / h, 2000.0 / w)
-                    new_w = int(w * scale)
-                    new_h = int(h * scale)
-                    pil_img = pil_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
-                
-                filename = f"{clean_name}_{int(time.time())}.jpg"
-                filepath = os.path.join(celebs_dir, filename)
-                pil_img.save(filepath, 'JPEG', quality=95)
-                added += 1
-                print(f"added {name} ({added}/{len(celebs)})")
+                        try:
+                            resp = requests.get(r['image'], timeout=5, headers=headers)
+                            if resp.status_code == 200:
+                                print(f"  downloaded image from DDGS for {name}", flush=True)
+                                if is_face_present(resp.content):
+                                    img_data = resp.content
+                                    print(f"  face found in DDGS image for {name}", flush=True)
+                                    break
+                                else:
+                                    print(f"  no face in DDGS image for {name}", flush=True)
+                        except Exception as e:
+                            print(f"  error downloading DDGS image: {e}", flush=True)
+                            continue
             except Exception as e:
-                print(f"error saving {name}: {e}")
-                import traceback
-                traceback.print_exc()
-                continue
+                print(f"  DDGS error for {name}: {e}", flush=True)
+        
+        if img_data:
+            if is_face_present(img_data):
+                try:
+                    pil_img = Image.open(io.BytesIO(img_data))
+                    if pil_img.mode != 'RGB':
+                        pil_img = pil_img.convert('RGB')
+                    
+                    img_array = np.array(pil_img, dtype=np.uint8)
+                    img_array = np.ascontiguousarray(img_array, dtype=np.uint8)
+                    
+                    h, w = img_array.shape[:2]
+                    if h > 2000 or w > 2000:
+                        scale = min(2000.0 / h, 2000.0 / w)
+                        new_w = int(w * scale)
+                        new_h = int(h * scale)
+                        pil_img = pil_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+                    
+                    filename = f"{clean_name}_{int(time.time())}.jpg"
+                    filepath = os.path.join(celebs_dir, filename)
+                    pil_img.save(filepath, 'JPEG', quality=95)
+                    added += 1
+                    print(f"added {name} ({added}/{len(celebs)})", flush=True)
+                except Exception as e:
+                    print(f"error saving {name}: {e}", flush=True)
+                    traceback.print_exc()
+                    continue
+            else:
+                print(f"  final check: no face detected in image for {name}", flush=True)
+        else:
+            print(f"  no image found for {name}", flush=True)
         
         time.sleep(0.5)
     
