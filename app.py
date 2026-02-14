@@ -79,23 +79,36 @@ class CelebrityMatcher:
         for filename in image_files:
             filepath = os.path.join(self.celebs_dir, filename)
             try:
-                pil_img = Image.open(filepath)
-                if pil_img.mode != 'RGB':
-                    pil_img = pil_img.convert('RGB')
+                img_bgr = cv2.imread(filepath)
+                if img_bgr is None:
+                    try:
+                        pil_img = Image.open(filepath)
+                        if pil_img.mode != 'RGB':
+                            pil_img = pil_img.convert('RGB')
+                        img_array = np.array(pil_img, dtype=np.uint8)
+                        img_bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+                    except Exception as e:
+                        print(f"failed to read {filename}: {e}", flush=True)
+                        continue
                 
-                rgb = np.array(pil_img, dtype=np.uint8)
-                rgb = np.ascontiguousarray(rgb.copy(), dtype=np.uint8)
-                
-                if len(rgb.shape) != 3 or rgb.shape[2] != 3:
-                    print(f"invalid image format for {filename}: shape {rgb.shape}", flush=True)
+                if len(img_bgr.shape) != 3 or img_bgr.shape[2] != 3:
+                    print(f"invalid image format for {filename}: shape {img_bgr.shape}", flush=True)
                     continue
                 
-                img_bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+                h, w = img_bgr.shape[:2]
+                if h > 1000 or w > 1000:
+                    scale = min(1000.0 / h, 1000.0 / w)
+                    new_w = int(w * scale)
+                    new_h = int(h * scale)
+                    img_bgr = cv2.resize(img_bgr, (new_w, new_h))
+                
+                rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+                rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
                 
                 try:
                     face_encs = face_recognition.face_encodings(rgb)
                 except Exception as e:
-                    print(f"error encoding {filename}: {e}, rgb shape={rgb.shape}, dtype={rgb.dtype}, min={rgb.min()}, max={rgb.max()}, contiguous={rgb.flags['C_CONTIGUOUS']}", flush=True)
+                    print(f"error encoding {filename}: {e}, rgb shape={rgb.shape}, dtype={rgb.dtype}", flush=True)
                     continue
                 
                 if face_encs and len(face_encs) > 0:
