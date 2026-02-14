@@ -462,7 +462,8 @@ def register_face():
                     os.remove(filepath)
                 return jsonify({'error': 'invalid image format'}), 400
             
-            print(f"register_face: rgb shape={rgb.shape}, dtype={rgb.dtype}, min={rgb.min()}, max={rgb.max()}, contiguous={rgb.flags[\"C_CONTIGUOUS\"]}", flush=True)
+            is_contiguous = rgb.flags['C_CONTIGUOUS']
+            print(f"register_face: rgb shape={rgb.shape}, dtype={rgb.dtype}, min={rgb.min()}, max={rgb.max()}, contiguous={is_contiguous}", flush=True)
             
             face_encs = face_recognition.face_encodings(rgb)
             
