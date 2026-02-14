@@ -778,6 +778,85 @@ def upload_image():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/upload_bulk', methods=['POST'])
+def upload_bulk():
+    try:
+        if 'files' not in request.files:
+            return jsonify({'error': 'no files provided'}), 400
+        
+        files = request.files.getlist('files')
+        if not files or len(files) == 0:
+            return jsonify({'error': 'no files selected'}), 400
+        
+        celebs_dir = "celebs"
+        if not os.path.exists(celebs_dir):
+            os.makedirs(celebs_dir, exist_ok=True)
+        
+        added = 0
+        failed = 0
+        results = []
+        
+        for file in files:
+            if file.filename == '':
+                continue
+            
+            name = os.path.splitext(file.filename)[0]
+            filename = f"{name.lower().replace(' ', '_')}_{int(time.time())}.jpg"
+            filepath = os.path.join(celebs_dir, filename)
+            
+            try:
+                pil_img = Image.open(file)
+                if pil_img.mode != 'RGB':
+                    pil_img = pil_img.convert('RGB')
+                
+                h, w = pil_img.size[1], pil_img.size[0]
+                if h > 800 or w > 800:
+                    scale = min(800.0 / h, 800.0 / w)
+                    new_w = int(w * scale)
+                    new_h = int(h * scale)
+                    pil_img = pil_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+                
+                pil_img.save(filepath, 'JPEG', quality=95)
+                
+                rgb = face_recognition.load_image_file(filepath)
+                rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
+                
+                face_encs = face_recognition.face_encodings(rgb, num_jitters=1)
+                if not face_encs or len(face_encs) == 0:
+                    os.remove(filepath)
+                    failed += 1
+                    results.append({'file': file.filename, 'status': 'failed', 'reason': 'no face detected'})
+                    continue
+                
+                added += 1
+                results.append({'file': file.filename, 'status': 'success', 'name': name})
+                
+            except Exception as e:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                failed += 1
+                print(f"error processing {file.filename}: {e}", flush=True)
+                results.append({'file': file.filename, 'status': 'failed', 'reason': str(e)})
+        
+        if matcher and added > 0:
+            matcher.load_database()
+        
+        return jsonify({
+            'success': True,
+            'message': f'uploaded {added} images successfully, {failed} failed',
+            'added': added,
+            'failed': failed,
+            'results': results,
+            'total_count': len(matcher.celeb_data) if matcher else 0
+        })
+        
+    except Exception as e:
+        print(f"error in upload_bulk: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug_mode = os.environ.get('FLASK_ENV') != 'production' and not os.environ.get('RAILWAY_ENVIRONMENT')
