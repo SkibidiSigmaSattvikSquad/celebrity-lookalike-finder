@@ -190,6 +190,40 @@
 </div>
 </div>
 </div>
+
+<!-- statistics section -->
+<div id="statistics-section" class="statistics-section" style="display: none;">
+<div class="statistics-container">
+<h2 class="statistics-title font-display">Detailed Analysis</h2>
+
+<div class="statistics-grid">
+<!-- Region Similarities -->
+<div class="stat-card">
+<h3 class="stat-card-title font-hand">Region Similarities</h3>
+<div class="stat-regions" id="region-stats">
+<!-- Will be populated by JavaScript -->
+</div>
+</div>
+
+<!-- Angles -->
+<div class="stat-card">
+<h3 class="stat-card-title font-hand">Face Angles</h3>
+<div class="stat-angles" id="angle-stats">
+<!-- Will be populated by JavaScript -->
+</div>
+</div>
+
+<!-- Most/Least Similar -->
+<div class="stat-card">
+<h3 class="stat-card-title font-hand">Key Insights</h3>
+<div class="stat-insights" id="insight-stats">
+<!-- Will be populated by JavaScript -->
+</div>
+</div>
+</div>
+</div>
+</div>
+
 <!-- action buttons -->
 <div class="action-buttons">
 <button class="action-button action-button-white" onclick="tryAgain()">
@@ -481,6 +515,14 @@ function showResults(data) {
     const dateStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
     document.getElementById('current-date').textContent = dateStr;
     
+    // Display statistics if available
+    if (data.statistics) {
+        displayStatistics(data.statistics);
+        document.getElementById('statistics-section').style.display = 'block';
+    } else {
+        document.getElementById('statistics-section').style.display = 'none';
+    }
+    
     if (canvas) {
         canvas.toBlob((blob) => {
             const reader = new FileReader();
@@ -488,6 +530,75 @@ function showResults(data) {
             reader.readAsDataURL(blob);
         });
     }
+}
+
+function displayStatistics(stats) {
+    // Display region similarities
+    const regionStats = document.getElementById('region-stats');
+    if (stats.regions) {
+        regionStats.innerHTML = '';
+        for (const [region, similarity] of Object.entries(stats.regions)) {
+            const regionDiv = document.createElement('div');
+            regionDiv.className = 'stat-region-item';
+            regionDiv.innerHTML = `
+                <div class="stat-region-name">${region.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
+                <div class="stat-region-bar">
+                    <div class="stat-region-fill" style="width: ${similarity}%"></div>
+                </div>
+                <div class="stat-region-value">${similarity}%</div>
+            `;
+            regionStats.appendChild(regionDiv);
+        }
+    }
+    
+    // Display angles
+    const angleStats = document.getElementById('angle-stats');
+    if (stats.angles && stats.angles.face_angle) {
+        const angle = stats.angles.face_angle;
+        angleStats.innerHTML = `
+            <div class="stat-angle-item">
+                <div class="stat-angle-label">Your Face Angle</div>
+                <div class="stat-angle-value">${angle.user}°</div>
+            </div>
+            <div class="stat-angle-item">
+                <div class="stat-angle-label">Match Face Angle</div>
+                <div class="stat-angle-value">${angle.match}°</div>
+            </div>
+            <div class="stat-angle-item">
+                <div class="stat-angle-label">Difference</div>
+                <div class="stat-angle-value">${angle.difference}°</div>
+            </div>
+        `;
+    } else {
+        angleStats.innerHTML = '<div class="stat-no-data">Angle data not available</div>';
+    }
+    
+    // Display insights
+    const insightStats = document.getElementById('insight-stats');
+    let insightsHTML = '';
+    if (stats.most_similar_region) {
+        insightsHTML += `
+            <div class="stat-insight-item stat-insight-best">
+                <span class="material-symbols-outlined">star</span>
+                <div>
+                    <div class="stat-insight-label">Most Similar</div>
+                    <div class="stat-insight-value">${stats.most_similar_region.name}: ${stats.most_similar_region.similarity}%</div>
+                </div>
+            </div>
+        `;
+    }
+    if (stats.least_similar_region) {
+        insightsHTML += `
+            <div class="stat-insight-item stat-insight-least">
+                <span class="material-symbols-outlined">info</span>
+                <div>
+                    <div class="stat-insight-label">Least Similar</div>
+                    <div class="stat-insight-value">${stats.least_similar_region.name}: ${stats.least_similar_region.similarity}%</div>
+                </div>
+            </div>
+        `;
+    }
+    insightStats.innerHTML = insightsHTML || '<div class="stat-no-data">No insights available</div>';
 }
 
 function tryAgain() {
@@ -631,6 +742,160 @@ async function submitCelebritySuggestion() {
 
 initCamera();
 </script>
+
+<style>
+.statistics-section {
+    margin: 2rem 0;
+    padding: 2rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+}
+
+.statistics-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.statistics-title {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    color: #fff;
+}
+
+.statistics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-card-title {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    color: #ffd700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.stat-region-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.stat-region-name {
+    min-width: 120px;
+    color: #fff;
+    font-weight: 500;
+}
+
+.stat-region-bar {
+    flex: 1;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.stat-region-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4ade80, #22c55e);
+    transition: width 0.3s ease;
+}
+
+.stat-region-value {
+    min-width: 50px;
+    text-align: right;
+    color: #fff;
+    font-weight: 600;
+}
+
+.stat-angle-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-angle-item:last-child {
+    border-bottom: none;
+}
+
+.stat-angle-label {
+    color: #ccc;
+}
+
+.stat-angle-value {
+    color: #fff;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.stat-insight-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    border-left: 3px solid;
+}
+
+.stat-insight-best {
+    border-left-color: #4ade80;
+}
+
+.stat-insight-least {
+    border-left-color: #f59e0b;
+}
+
+.stat-insight-item .material-symbols-outlined {
+    font-size: 2rem;
+}
+
+.stat-insight-label {
+    color: #ccc;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+
+.stat-insight-value {
+    color: #fff;
+    font-weight: 600;
+}
+
+.stat-no-data {
+    color: #999;
+    text-align: center;
+    padding: 1rem;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .statistics-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-region-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .stat-region-bar {
+        width: 100%;
+    }
+}
+</style>
 
 </body>
 </html>

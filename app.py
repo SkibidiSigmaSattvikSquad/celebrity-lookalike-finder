@@ -286,6 +286,86 @@ except Exception as e:
     matcher = None
 
 
+def calculate_face_statistics(user_lms, match_lms):
+    """
+    Calculate detailed face matching statistics including angles and region similarities.
+    Returns a dictionary with statistics.
+    """
+    if user_lms is None or match_lms is None:
+        return None
+    
+    # MediaPipe face mesh landmark indices for different regions
+    # Based on MediaPipe Face Mesh documentation
+    LEFT_EYE_INDICES = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246]
+    RIGHT_EYE_INDICES = [362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398]
+    NOSE_INDICES = [1, 2, 5, 4, 6, 19, 20, 94, 125, 141, 235, 236, 3, 51, 48, 115, 131, 134, 102, 49, 220, 305, 290, 305, 290, 305]
+    MOUTH_INDICES = [61, 146, 91, 181, 84, 17, 314, 405, 320, 307, 375, 321, 308, 324, 318]
+    FACE_OVAL_INDICES = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136]
+    
+    stats = {
+        'overall_similarity': 0.0,
+        'angles': {},
+        'regions': {}
+    }
+    
+    # Calculate overall similarity based on landmark distances
+    errors = np.linalg.norm(user_lms - match_lms, axis=1)
+    avg_error = np.mean(errors)
+    stats['overall_similarity'] = max(0, (1 - avg_error * 10) * 100)
+    
+    # Calculate angles
+    # Face angle (using nose tip and chin)
+    nose_tip_idx = 1
+    chin_idx = 175
+    if len(user_lms) > chin_idx and len(match_lms) > chin_idx:
+        user_face_vec = user_lms[nose_tip_idx] - user_lms[chin_idx]
+        match_face_vec = match_lms[nose_tip_idx] - match_lms[chin_idx]
+        user_angle = np.arctan2(user_face_vec[1], user_face_vec[0]) * 180 / np.pi
+        match_angle = np.arctan2(match_face_vec[1], match_face_vec[0]) * 180 / np.pi
+        angle_diff = abs(user_angle - match_angle)
+        stats['angles']['face_angle'] = {
+            'user': round(user_angle, 1),
+            'match': round(match_angle, 1),
+            'difference': round(angle_diff, 1)
+        }
+    
+    # Calculate region similarities
+    def calculate_region_similarity(indices):
+        if not indices:
+            return 0.0
+        valid_indices = [i for i in indices if i < len(user_lms) and i < len(match_lms)]
+        if not valid_indices:
+            return 0.0
+        region_errors = errors[valid_indices]
+        avg_error = np.mean(region_errors)
+        similarity = max(0, (1 - avg_error * 10) * 100)
+        return round(similarity, 1)
+    
+    stats['regions'] = {
+        'left_eye': calculate_region_similarity(LEFT_EYE_INDICES),
+        'right_eye': calculate_region_similarity(RIGHT_EYE_INDICES),
+        'nose': calculate_region_similarity(NOSE_INDICES),
+        'mouth': calculate_region_similarity(MOUTH_INDICES),
+        'face_oval': calculate_region_similarity(FACE_OVAL_INDICES)
+    }
+    
+    # Find most similar region
+    most_similar = max(stats['regions'].items(), key=lambda x: x[1])
+    stats['most_similar_region'] = {
+        'name': most_similar[0].replace('_', ' ').title(),
+        'similarity': most_similar[1]
+    }
+    
+    # Find least similar region
+    least_similar = min(stats['regions'].items(), key=lambda x: x[1])
+    stats['least_similar_region'] = {
+        'name': least_similar[0].replace('_', ' ').title(),
+        'similarity': least_similar[1]
+    }
+    
+    return stats
+
+
 def draw_wireframe_on_image(img_array, match_data=None):
     """
     Draw wireframe overlay on an image using MediaPipe face mesh.
@@ -386,15 +466,27 @@ def process_frame(img_array, matcher):
     
     match = None
     similarity = 0.0
+    statistics = None
     
     if results.multi_face_landmarks:
         num_faces = len(results.multi_face_landmarks)
         print(f"process_frame: MediaPipe detected {num_faces} face(s)", flush=True)
+        
+        # Extract user's landmarks
+        user_lm_list = results.multi_face_landmarks[0].landmark
+        user_lms = np.array([(l.x, l.y) for l in user_lm_list])
+        user_lms_norm = user_lms - user_lms.mean(axis=0)
+        
         if matcher and matcher.celeb_data and len(matcher.celeb_data) > 0:
             print(f"process_frame: calling find_match with {len(matcher.celeb_data)} celebrities in database", flush=True)
             match, distance, similarity = matcher.find_match(rgb_img)
             if match:
                 print(f"process_frame: match found: {match['name']}, similarity: {similarity:.2f}%", flush=True)
+                
+                # Calculate detailed statistics
+                if 'lms' in match and match['lms'] is not None:
+                    statistics = calculate_face_statistics(user_lms_norm, match['lms'])
+                    print(f"process_frame: statistics calculated", flush=True)
             else:
                 print(f"process_frame: no match found (match is None)", flush=True)
         else:
@@ -407,7 +499,7 @@ def process_frame(img_array, matcher):
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     processed_img_with_wireframe = draw_wireframe_on_image(img_rgb, match)
     
-    return processed_img_with_wireframe, match, similarity
+    return processed_img_with_wireframe, match, similarity, statistics
 
 
 def image_to_base64(img):
@@ -514,7 +606,7 @@ def process_image():
         print(f"process_image: database has {len(matcher.celeb_data)} celebrities", flush=True)
         
         try:
-            processed_img, match, similarity = process_frame(image_array, matcher)
+            processed_img, match, similarity, statistics = process_frame(image_array, matcher)
             if processed_img is None:
                 print("process_image: processed_img is None", flush=True)
                 return jsonify({'error': 'failed to process image'}), 500
@@ -561,14 +653,20 @@ def process_image():
             display_name = format_celebrity_name(match['name'])
             print(f"process_image: formatted display name: {display_name}", flush=True)
             
-            return jsonify({
+            response_data = {
                 'success': True,
                 'match_name': display_name,
                 'similarity': float(similarity),
                 'processed_image': processed_img_str,
                 'celebrity_image': celeb_img_str,
                 'face_count': len(matcher.celeb_data) if matcher else 0
-            })
+            }
+            
+            # Add statistics if available
+            if statistics:
+                response_data['statistics'] = statistics
+            
+            return jsonify(response_data)
         except Exception as e:
             print(f"error preparing response: {e}")
             import traceback
