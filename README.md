@@ -20,3 +20,4 @@ this is a cool project that tells you which famous person you look like. it uses
 it uses mediapipe face recognition to compare ur face to like a bunch of celebrities. that are stored in the celebs folder, if you want to add more, there is a feature in which you an name a celebrity and the web scraping program will find a photo of that celebrity and download it
 
 # celebrity-lookalike-finder
+# celebrity-lookalike-finder
