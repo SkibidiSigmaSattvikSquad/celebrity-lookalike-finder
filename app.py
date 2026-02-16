@@ -278,7 +278,6 @@ def calculate_face_statistics(user_lms, match_lms):
     if user_lms is None or match_lms is None:
         return None
     
-    # MediaPipe face mesh landmark indices
     LEFT_EYE_INDICES = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246]
     RIGHT_EYE_INDICES = [362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398]
     NOSE_INDICES = [1, 2, 5, 4, 6, 19, 20, 94, 125, 141, 235, 236, 3, 51, 48, 115, 131, 134, 102, 49, 220, 305, 290, 305, 290, 305]
@@ -295,7 +294,6 @@ def calculate_face_statistics(user_lms, match_lms):
     avg_error = np.mean(errors)
     stats['overall_similarity'] = max(0, (1 - avg_error * 10) * 100)
     
-    # Face angle
     nose_tip_idx = 1
     chin_idx = 175
     if len(user_lms) > chin_idx and len(match_lms) > chin_idx:
@@ -442,7 +440,6 @@ def process_frame(img_array, matcher):
         num_faces = len(results.multi_face_landmarks)
         print(f"process_frame: MediaPipe detected {num_faces} face(s)", flush=True)
         
-        # Extract user's landmarks
         user_lm_list = results.multi_face_landmarks[0].landmark
         user_lms = np.array([(l.x, l.y) for l in user_lm_list])
         user_lms_norm = user_lms - user_lms.mean(axis=0)
@@ -453,7 +450,6 @@ def process_frame(img_array, matcher):
             if match:
                 print(f"process_frame: match found: {match['name']}, similarity: {similarity:.2f}%", flush=True)
                 
-                # Calculate detailed statistics
                 if 'lms' in match and match['lms'] is not None:
                     statistics = calculate_face_statistics(user_lms_norm, match['lms'])
                     print(f"process_frame: statistics calculated", flush=True)
@@ -465,7 +461,6 @@ def process_frame(img_array, matcher):
     else:
         print(f"process_frame: MediaPipe did not detect any faces", flush=True)
     
-    # Draw wireframe overlay on processed image
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     processed_img_with_wireframe = draw_wireframe_on_image(img_rgb, match)
     

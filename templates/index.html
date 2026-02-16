@@ -11,12 +11,10 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-<!-- background stars -->
 <div class="star-decoration star-1">★</div>
 <div class="star-decoration star-2">★</div>
 
 <div id="camera-view" class="camera-view-container">
-<!-- top header -->
 <div class="camera-header">
 <div class="header-left">
 <div class="header-icon">
@@ -28,7 +26,6 @@
 <span class="material-symbols-outlined">close</span> Exit
 </button>
 </div>
-<!-- the camera frame thing -->
 <div class="vanity-mirror-frame">
 <div class="mirror-top-lightbulbs">
 <div class="lightbulb"></div>
@@ -38,25 +35,20 @@
 <div class="lightbulb"></div>
 </div>
 
-<!-- Video screen -->
 <div class="video-screen">
 <video id="video" autoplay playsinline muted></video>
 <canvas id="canvas" style="display: none;"></canvas>
 
-<!-- Face guide oval -->
 <div class="face-guide"></div>
 
-<!-- REC indicator -->
 <div class="rec-indicator">
 <span class="rec-dot"></span>
 <span>REC</span>
 </div>
 
-<!-- Sparkle icon -->
 <div class="sparkle-icon">✨</div>
 </div>
 
-<!-- Bottom lightbulbs -->
 <div class="mirror-bottom-lightbulbs">
 <div class="lightbulb"></div>
 <div class="lightbulb"></div>
@@ -65,12 +57,9 @@
 <div class="lightbulb"></div>
 </div>
 
-<!-- "You're a Star!" sticker -->
 <div class="star-sticker font-display">You're a Star!</div>
 </div>
-<!-- buttons at bottom -->
 <div class="control-buttons">
-<!-- upload button -->
 <div class="control-button-group">
 <button class="control-button-icon" onclick="uploadPhoto()">
 <span class="material-symbols-outlined">edit</span>
@@ -78,7 +67,6 @@
 <div class="control-button-label font-display">Upload</div>
 </div>
 
-<!-- main photo button -->
 <div class="take-photo-container">
 <button id="action-btn" class="take-photo-button" onclick="capturePhoto()">
 <div class="take-photo-top-bar"></div>
@@ -89,7 +77,6 @@
 </button>
 </div>
 
-<!-- flip camera -->
 <div class="control-button-group">
 <button class="control-button-icon" onclick="flipCamera()">
 <span class="material-symbols-outlined">cameraswitch</span>
@@ -97,10 +84,8 @@
 <div class="control-button-label font-display">Flip</div>
 </div>
 </div>
-<!-- error stuff -->
 <div id="error-message" class="error-message"></div>
 
-<!-- loading spinner thing -->
 <div id="loading" class="loading-overlay" style="display: none;">
 <div class="loading-content">
 <div class="loading-spinner">
@@ -113,13 +98,11 @@
 </div>
 </div>
 
-<!-- hidden file input for uploads -->
 <input id="file-input" type="file" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
 </div>
 
 <div id="results-view" class="results-view-container">
 <div class="results-content">
-<!-- results page header -->
 <div class="results-header">
 <div class="analysis-complete-badge">
 <span class="material-symbols-outlined">auto_awesome</span>
@@ -131,17 +114,13 @@
 </svg>
 <p class="results-description font-body">searched through <span id="face-count">50,000</span> faces and found your match. looks pretty similar!</p>
 </div>
-<!-- the main results card -->
 <div class="results-card-container">
-<!-- film strip thing at top -->
 <div class="film-strip-header">
 <div class="film-strip-pattern"></div>
 <div class="film-strip-hole"></div>
 </div>
 
-<!-- card content -->
 <div class="results-card">
-<!-- production info at top -->
 <div class="production-details">
 <div class="production-info">
 <div class="production-label font-hand">PRODUCTION</div>
@@ -159,9 +138,7 @@
 </div>
 </div>
 
-<!-- side by side photos -->
 <div class="photos-comparison">
-<!-- user's photo -->
 <div class="photo-card photo-card-left">
 <div class="photo-frame">
 <img id="processed-image" class="photo-image" alt="Your photo"/>
@@ -170,7 +147,6 @@
 <div class="photo-badge photo-badge-red"></div>
 </div>
 
-<!-- percentage in middle -->
 <div class="match-circle">
 <div class="match-circle-border"></div>
 <svg class="match-circle-svg" fill="none" stroke="currentColor" stroke-dasharray="10 15" stroke-linecap="round" stroke-width="3" viewBox="0 0 100 100">
@@ -181,7 +157,6 @@
 <div class="match-icon material-symbols-outlined">sync_alt</div>
 </div>
 
-<!-- celeb photo -->
 <div class="photo-card photo-card-right">
 <div class="photo-frame">
 <img id="celebrity-image" class="photo-image" alt="Celebrity match"/>
@@ -191,7 +166,6 @@
 </div>
 </div>
 
-<!-- bottom film info -->
 <div class="film-details-footer">
 <div class="film-detail font-hand">Cam: A</div>
 <div class="film-detail font-hand">Date: <span id="current-date"></span></div>
@@ -199,40 +173,32 @@
 </div>
 </div>
 
-<!-- statistics section -->
 <div id="statistics-section" class="statistics-section" style="display: none;">
 <div class="statistics-container">
 <h2 class="statistics-title font-display">Detailed Analysis</h2>
 
 <div class="statistics-grid">
-<!-- Region Similarities -->
 <div class="stat-card">
 <h3 class="stat-card-title font-hand">Region Similarities</h3>
 <div class="stat-regions" id="region-stats">
-<!-- Will be populated by JavaScript -->
 </div>
 </div>
 
-<!-- Angles -->
 <div class="stat-card">
 <h3 class="stat-card-title font-hand">Face Angles</h3>
 <div class="stat-angles" id="angle-stats">
-<!-- Will be populated by JavaScript -->
 </div>
 </div>
 
-<!-- Most/Least Similar -->
 <div class="stat-card">
 <h3 class="stat-card-title font-hand">Key Insights</h3>
 <div class="stat-insights" id="insight-stats">
-<!-- Will be populated by JavaScript -->
 </div>
 </div>
 </div>
 </div>
 </div>
 
-<!-- action buttons -->
 <div class="action-buttons">
 <button class="action-button action-button-white" onclick="tryAgain()">
 <span class="material-symbols-outlined">restart_alt</span> Try Again
@@ -245,9 +211,7 @@
 </button>
 </div>
 </div>
-<!-- extra sections -->
 <div id="sections-container" class="additional-sections" style="display: none;">
-<!-- suggest a celeb -->
 <div class="suggest-section">
 <span class="material-symbols-outlined suggest-icon">person_add</span>
 <h2 class="suggest-title font-display">Don't see your favorite star?</h2>
@@ -266,7 +230,6 @@
 <div id="suggest-message" class="suggest-message"></div>
 </div>
 
-<!-- add your face -->
 <div class="register-section">
 <span class="register-icon">😊</span>
 <h2 class="register-title font-display">Add Your Face to the Database</h2>
@@ -280,7 +243,6 @@ Join Now <span class="material-symbols-outlined">arrow_forward</span>
 </div>
 </div>
 
-<!-- Footer -->
 <div class="footer">
 <div class="footer-links">
 <a href="#" class="footer-link">Privacy Policy</a>
@@ -447,7 +409,6 @@ function capturePhoto() {
         ctx.fillRect(0, 0, 640, 480);
     }
     
-    // Show loading indicator immediately
     document.getElementById('loading').style.display = 'flex';
     
     processImage();

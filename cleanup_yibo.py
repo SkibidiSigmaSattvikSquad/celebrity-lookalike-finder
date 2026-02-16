@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# remove yibo from database
 
 import pickle
 import os
