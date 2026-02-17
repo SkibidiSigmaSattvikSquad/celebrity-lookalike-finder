@@ -1,13 +1,5 @@
----
-title: Celebrity Lookalike Finder
-emoji: 🎭
-colorFrom: red
-colorTo: yellow
-sdk: docker
-pinned: false
----
 
-# celebrity lookalike finder
+title: Celebrity Lookike finder
 
 this is a cool project that tells you which famous person you look like. it uses a webcam or you can just upload a pic and it finds your twin lol.
 
