@@ -1,11 +1,4 @@
----
-title: Celebrity Lookalike Finder
-emoji: 🎭
-colorFrom: red
-colorTo: yellow
-sdk: docker
-pinned: false
----
+
 
 # celebrity lookalike finder
 

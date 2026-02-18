@@ -645,12 +645,12 @@ def get_tmdb_image(name):
             return None
         url = f"https://api.themoviedb.org/3/search/person"
         params = {"api_key": TMDB_API_KEY, "query": name}
-        data = requests.get(url, params=params, timeout=5).json()
+        data = requests.get(url, params=params, timeout=3).json()
         if data.get('results'):
             path = data['results'][0].get('profile_path')
             if path:
                 img_url = f"https://image.tmdb.org/t/p/h632{path}"
-                resp = requests.get(img_url, timeout=10)
+                resp = requests.get(img_url, timeout=5)
                 if resp.status_code == 200:
                     return resp.content
         return None
@@ -665,11 +665,11 @@ def get_wikipedia_image(name):
             "action": "query", "titles": name, "prop": "pageimages",
             "format": "json", "pithumbsize": 1000, "redirects": 1
         }
-        resp = requests.get(url, params=params, timeout=5).json()
+        resp = requests.get(url, params=params, timeout=3).json()
         pages = resp.get("query", {}).get("pages", {})
         for p in pages.values():
             if "thumbnail" in p:
-                img_resp = requests.get(p["thumbnail"]["source"], timeout=10)
+                img_resp = requests.get(p["thumbnail"]["source"], timeout=5)
                 if img_resp.status_code == 200:
                     return img_resp.content
         return None
@@ -710,30 +710,29 @@ def suggest_celebrity():
         }
         
         img_data = get_tmdb_image(name)
-        if img_data and not is_face_present(img_data):
-            img_data = None
-        
         if not img_data:
             img_data = get_wikipedia_image(name)
-            if img_data and not is_face_present(img_data):
-                img_data = None
         
         if not img_data:
-            for attempt in range(3):
+            for attempt in range(2):
                 try:
-                    time.sleep(1 + attempt * 2)
+                    if attempt > 0:
+                        time.sleep(0.5)
                     with DDGS() as ddgs:
-                        results = list(ddgs.images(query=f"{name} headshot portrait", max_results=5))
-                        for r in results:
-                            resp = requests.get(r['image'], timeout=10, headers=headers)
-                            if resp.status_code == 200 and is_face_present(resp.content):
-                                img_data = resp.content
-                                break
+                        results = list(ddgs.images(query=f"{name} headshot portrait", max_results=8))
+                        for r in results[:5]:
+                            try:
+                                resp = requests.get(r['image'], timeout=5, headers=headers)
+                                if resp.status_code == 200:
+                                    img_data = resp.content
+                                    break
+                            except:
+                                continue
                         if img_data:
                             break
                 except Exception as e:
-                    if attempt < 2:
-                        time.sleep(2)
+                    if attempt < 1:
+                        time.sleep(0.5)
         
         if img_data and is_face_present(img_data):
             filename = f"{clean_name}_{int(time.time())}.jpg"

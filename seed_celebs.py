@@ -30,19 +30,18 @@ def is_face_present(image_bytes):
         has_face = results.detections is not None and len(results.detections) > 0
         return has_face
     except Exception as e:
-        print(f"is_face_present error: {e}", flush=True)
         return False
 
 def get_tmdb_image(name):
     try:
         url = f"https://api.themoviedb.org/3/search/person"
         params = {"api_key": TMDB_API_KEY, "query": name}
-        data = requests.get(url, params=params, timeout=5).json()
+        data = requests.get(url, params=params, timeout=3).json()
         if data.get('results'):
             path = data['results'][0].get('profile_path')
             if path:
                 img_url = f"https://image.tmdb.org/t/p/h632{path}"
-                resp = requests.get(img_url, timeout=10)
+                resp = requests.get(img_url, timeout=5)
                 if resp.status_code == 200: return resp.content
         return None
     except:
@@ -55,11 +54,11 @@ def get_wikipedia_image(name):
             "action": "query", "titles": name, "prop": "pageimages",
             "format": "json", "pithumbsize": 1000, "redirects": 1
         }
-        resp = requests.get(url, params=params, timeout=5).json()
+        resp = requests.get(url, params=params, timeout=3).json()
         pages = resp.get("query", {}).get("pages", {})
         for p in pages.values():
             if "thumbnail" in p:
-                img_resp = requests.get(p["thumbnail"]["source"], timeout=10)
+                img_resp = requests.get(p["thumbnail"]["source"], timeout=5)
                 if img_resp.status_code == 200: return img_resp.content
         return None
     except:
@@ -105,30 +104,18 @@ def seed_celebs():
         
         existing = [f for f in os.listdir(celebs_dir) if f.lower().startswith(clean_name)]
         if existing:
-            print(f"skipping {name} - already exists", flush=True)
             continue
         
         img_data = None
         
-        print(f"trying {name}...", flush=True)
         img_data = get_tmdb_image(name)
-        if img_data:
-            print(f"  got TMDB image for {name}", flush=True)
-            if not is_face_present(img_data):
-                print(f"  no face in TMDB image for {name}", flush=True)
-                img_data = None
-        else:
-            print(f"  no TMDB image for {name}", flush=True)
+        if img_data and not is_face_present(img_data):
+            img_data = None
         
         if not img_data:
             img_data = get_wikipedia_image(name)
-            if img_data:
-                print(f"  got Wikipedia image for {name}", flush=True)
-                if not is_face_present(img_data):
-                    print(f"  no face in Wikipedia image for {name}", flush=True)
-                    img_data = None
-            else:
-                print(f"  no Wikipedia image for {name}", flush=True)
+            if img_data and not is_face_present(img_data):
+                img_data = None
         
         if not img_data:
             search_terms = [
@@ -141,37 +128,26 @@ def seed_celebs():
                     break
                 for attempt in range(2):
                     try:
-                        print(f"  trying DDGS for {name} with '{search_term}' (attempt {attempt+1})...", flush=True)
-                        time.sleep(3 + attempt * 3 + random.uniform(1, 3))
+                        if attempt > 0:
+                            time.sleep(1)
                         with DDGS() as ddgs:
-                            results = list(ddgs.images(query=search_term, max_results=5))
-                            print(f"  DDGS returned {len(results)} results for {name}", flush=True)
-                            for r in results:
+                            results = list(ddgs.images(query=search_term, max_results=8))
+                            for r in results[:5]:
                                 try:
-                                    time.sleep(random.uniform(0.5, 1.5))
-                                    resp = requests.get(r['image'], timeout=10, headers=headers)
-                                    if resp.status_code == 200:
-                                        print(f"  downloaded image from DDGS for {name}", flush=True)
-                                        if is_face_present(resp.content):
-                                            img_data = resp.content
-                                            print(f"  face found in DDGS image for {name}", flush=True)
-                                            break
-                                        else:
-                                            print(f"  no face in DDGS image for {name}", flush=True)
-                                except Exception as e:
-                                    print(f"  error downloading DDGS image: {e}", flush=True)
+                                    resp = requests.get(r['image'], timeout=5, headers=headers)
+                                    if resp.status_code == 200 and is_face_present(resp.content):
+                                        img_data = resp.content
+                                        break
+                                except:
                                     continue
                         if img_data:
                             break
                     except Exception as e:
                         error_msg = str(e)
                         if "403" in error_msg or "Forbidden" in error_msg:
-                            print(f"  DDGS rate limited for {name}, waiting longer...", flush=True)
-                            time.sleep(5 + random.uniform(2, 5))
-                        else:
-                            print(f"  DDGS error for {name} (attempt {attempt+1}): {e}", flush=True)
+                            time.sleep(2)
                         if attempt < 1:
-                            time.sleep(3)
+                            time.sleep(1)
         
         if img_data:
             if is_face_present(img_data):
@@ -196,15 +172,9 @@ def seed_celebs():
                     added += 1
                     print(f"added {name} ({added}/{len(celebs)})", flush=True)
                 except Exception as e:
-                    print(f"error saving {name}: {e}", flush=True)
-                    traceback.print_exc()
                     continue
-            else:
-                print(f"  final check: no face detected in image for {name}", flush=True)
-        else:
-            print(f"  no image found for {name}", flush=True)
         
-        time.sleep(2 + random.uniform(0.5, 1.5))
+        time.sleep(0.5)
     
     print(f"done! added {added} celebrities")
     return added

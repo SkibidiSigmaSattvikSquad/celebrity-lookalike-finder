@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bdash
 set -e
 
 # Limit memory usage during build
