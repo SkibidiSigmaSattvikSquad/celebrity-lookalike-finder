@@ -1,6 +1,10 @@
+<<<<<<< HEAD
 
 
 # celebrity lookalike finder
+=======
+ Celebrity Lookike finder
+>>>>>>> 3b78b01c745846a4be48d4999a77ccfec59edc6e
 
 this is a cool project that tells you which famous person you look like. it uses a webcam or you can just upload a pic and it finds your twin lol.
 
